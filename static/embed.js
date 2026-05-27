@@ -112,22 +112,20 @@
     }
   };
 
-  // Detect language: query param, data attribute, URL path, or default
+  // Detect language: explicit signals only (URL path/param/attr) — never <html lang>
+  // since multi-lingual CMSes like Creatium may set it globally regardless of page.
   function detectLang() {
     try {
-      // 1. ?lang=ru in current URL
+      // 1. ?lang=ru in current URL (highest priority — explicit override)
       var sp = new URLSearchParams(location.search);
       if (sp.get('lang') && I18N[sp.get('lang')]) return sp.get('lang');
-      // 2. data-lang on container
+      // 2. data-lang attribute on container (explicit per-embed)
       var c = document.getElementById(CONTAINER_ID);
       if (c && c.dataset && c.dataset.lang && I18N[c.dataset.lang]) return c.dataset.lang;
-      // 3. window.ZEBRA_TUR_LANG global
+      // 3. window.ZEBRA_TUR_LANG global variable
       if (window.ZEBRA_TUR_LANG && I18N[window.ZEBRA_TUR_LANG]) return window.ZEBRA_TUR_LANG;
-      // 4. URL path contains /ru/ or /ru$
-      if (/\/ru(\/|$)/.test(location.pathname)) return 'ru';
-      // 5. <html lang="ru">
-      var hl = (document.documentElement.lang || '').toLowerCase();
-      if (hl.indexOf('ru') === 0) return 'ru';
+      // 4. URL path contains /ru/ or /ru$ (auto-detect from site routing)
+      if (/\/ru(\/|$)/i.test(location.pathname)) return 'ru';
     } catch (e) {}
     return 'ro';
   }
@@ -265,7 +263,8 @@
     .zt-btn-secondary:hover { background: #e2e8f0; }
     .zt-btn-brand { background: #3a48d0; color: white; }
     .zt-btn-brand:hover { background: #2f38aa; }
-    .zt-input, .zt-select { width: 100%; padding: 10px 12px; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 14px; font-weight: 500; background: white; color: #0b1020; font-family: inherit; }
+    .zt-input, .zt-select { width: 100%; padding: 0 12px; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 14px; font-weight: 500; background: white; color: #0b1020; font-family: inherit; height: 44px; box-sizing: border-box; line-height: normal; }
+    textarea.zt-input { height: auto; padding: 10px 12px; min-height: 70px; }
     .zt-input:focus, .zt-select:focus { outline: none; border-color: #3a48d0; }
     .zt-label { display: block; font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
     .zt-chip { display: inline-flex; align-items: center; padding: 6px 12px; border-radius: 999px; border: 2px solid #e2e8f0; background: white; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; user-select: none; font-family: inherit; }
@@ -384,7 +383,8 @@
       .zt-trip-title { font-size: 14px; }
       .zt-trip-desc { font-size: 11px; }
 
-      .zt-input, .zt-select { padding: 9px 8px; font-size: 13px; }
+      .zt-input, .zt-select { padding: 0 10px; font-size: 13px; height: 42px; }
+      textarea.zt-input { height: auto; padding: 9px 10px; min-height: 60px; }
       .zt-label { font-size: 10px; margin-bottom: 4px; }
 
       /* Chips: compact but tappable */
@@ -410,7 +410,7 @@
     }
     @media (max-width: 380px) {
       .zt-hero h1 { font-size: 18px; }
-      .zt-input, .zt-select { font-size: 12px; padding: 8px 6px; }
+      .zt-input, .zt-select { font-size: 12px; padding: 0 8px; height: 40px; }
     }
   `;
 
