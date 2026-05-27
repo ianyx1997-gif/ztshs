@@ -184,6 +184,27 @@ def page_turist_hotel(hotel_id):
     return render_template("turist_hotel.html", agency=config.AGENCY_NAME, hotel_id=hotel_id, embed=embed)
 
 
+@app.route("/embed.js")
+def embed_js():
+    """Inline widget (no iframe) — injects search UI directly into the host page."""
+    resp = send_from_directory("static", "embed.js")
+    resp.headers["Content-Type"] = "application/javascript; charset=utf-8"
+    resp.headers["Cache-Control"] = "public, max-age=300"
+    resp.headers["Access-Control-Allow-Origin"] = "*"
+    return resp
+
+
+@app.route("/embed-config.js")
+def embed_config_js():
+    """Configures the embed.js widget — sets the API base URL."""
+    base = config.PUBLIC_BASE_URL or request.host_url.rstrip("/")
+    js = f"window.ZEBRA_TUR_API = '{base}';"
+    return js, 200, {
+        "Content-Type": "application/javascript; charset=utf-8",
+        "Access-Control-Allow-Origin": "*",
+    }
+
+
 @app.route("/widget.js")
 def widget_js():
     """JavaScript widget that embeds the B2C search on partner sites (e.g. zebratur.md/bulgaria)."""
