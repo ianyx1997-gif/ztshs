@@ -86,7 +86,7 @@
       forPax: 'для',
       mealBreakfast: '☕ Завтрак', mealHB: '🥐 Полупансион', mealFB: '🍴 Полный пансион', mealAI: '🍽️ Всё включено', mealUltra: '🍾 Ультра всё включено',
       facFirstLine: '🏖️ Первая линия', facPool: '🏊 Бассейн', facAqua: '💦 Аквапарк', facBeach: '⛱️ Пляж', facAdult: '🔞 Adult Only', facWifi: '📶 Wi-Fi', facParking: '🅿️ Парковка',
-      details: 'Подробнее →',
+      details: 'Смотреть предложение →',
       backToSearch: '← Назад к поиску',
       save: '🤍 Сохранить', saved: '❤️ Сохранено', copyLink: '🔗 Копировать ссылку', reserveTemp: '⚡ Предварительное бронирование',
       roomsTitle: '🛏️ Доступные номера и цены',
