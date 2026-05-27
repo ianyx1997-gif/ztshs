@@ -189,7 +189,7 @@ def embed_js():
     """Inline widget (no iframe) — injects search UI directly into the host page."""
     resp = send_from_directory("static", "embed.js")
     resp.headers["Content-Type"] = "application/javascript; charset=utf-8"
-    resp.headers["Cache-Control"] = "public, max-age=300"
+    resp.headers["Cache-Control"] = "public, max-age=60, must-revalidate"
     resp.headers["Access-Control-Allow-Origin"] = "*"
     return resp
 

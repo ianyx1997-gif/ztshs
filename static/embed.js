@@ -225,13 +225,18 @@
     .zt-fav-row:hover { border-color: #fecdd3; background: #fff1f2; }
     .zt-fav-img { width: 88px; height: 88px; flex-shrink: 0; background: #e2e8f0; border-radius: 10px; overflow: hidden; }
     .zt-fav-img img { width: 100%; height: 100%; object-fit: cover; }
-    .zt-search-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px; margin-bottom: 14px; }
-    .zt-search-grid > .zt-cell-dates { grid-column: 1 / 2; }
-    .zt-date-range { display: flex; gap: 4px; align-items: center; }
-    .zt-date-range > .zt-input { flex: 1; min-width: 0; }
-    .zt-date-arrow { color: #94a3b8; font-weight: 700; flex-shrink: 0; }
-    .zt-radio-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+    .zt-search-form { display: block; }
+    .zt-cell-dates { margin-bottom: 10px; }
+    .zt-date-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .zt-date-grid > .zt-input { min-width: 0; width: 100%; }
     .zt-dual-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .zt-radio-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+    @media (min-width: 720px) {
+      .zt-search-form { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px; align-items: end; }
+      .zt-cell-dates { margin-bottom: 0; }
+      .zt-dual-grid { display: contents; }
+    }
+    .zt-photo-stage { touch-action: pan-y; user-select: none; -webkit-user-select: none; }
     @media (max-width: 720px) {
       #zebra-tur-widget > .zt-app { padding: 8px !important; }
       .zt-hero h1 { font-size: 20px; }
@@ -243,13 +248,6 @@
       .zt-modal-body { border-radius: 12px; }
       .zt-modal-header { padding: 14px; }
       .zt-modal-footer { padding: 12px 14px; }
-
-      /* Mobile layout: dates side-by-side full width, then 2x2 grid */
-      .zt-search-grid { display: block; }
-      .zt-search-grid > .zt-cell-dates { margin-bottom: 10px; }
-      .zt-date-range { display: grid !important; grid-template-columns: 1fr 1fr; gap: 6px; flex-direction: row; }
-      .zt-date-arrow { display: none !important; }
-      .zt-mobile-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 
       /* Trip type cards stack vertically */
       .zt-radio-grid { grid-template-columns: 1fr; gap: 8px; }
@@ -284,8 +282,7 @@
     }
     @media (max-width: 380px) {
       .zt-hero h1 { font-size: 18px; }
-      .zt-search-grid { grid-template-columns: 1fr; }
-      .zt-search-grid > .zt-cell-dates { grid-column: 1; }
+      .zt-input, .zt-select { font-size: 12px; padding: 8px 6px; }
     }
   `;
 
@@ -308,16 +305,15 @@
           </button>
         </div>
 
-        <div class="zt-search-grid">
+        <div class="zt-search-form">
           <div class="zt-cell-dates">
             <label class="zt-label">📅 Plecare în perioada</label>
-            <div class="zt-date-range">
+            <div class="zt-date-grid">
               <input type="date" class="zt-input" data-action="filter" data-key="dateFrom" value="${esc(S.filters.dateFrom)}">
-              <span class="zt-date-arrow">→</span>
               <input type="date" class="zt-input" data-action="filter" data-key="dateTo" value="${esc(S.filters.dateTo)}">
             </div>
           </div>
-          <div class="zt-mobile-row" style="display:contents;">
+          <div class="zt-dual-grid">
             <div>
               <label class="zt-label">🌙 Nopți</label>
               <select class="zt-select" data-action="filter" data-key="nights">
@@ -481,7 +477,6 @@
   }
 
   function tplHotelHeader(h) {
-    var hasRooms = S.hotelRooms && S.hotelRooms.length > 0;
     return `
       <div class="zt-card" style="margin-bottom:14px;">
         <div class="zt-row" style="justify-content:space-between;align-items:flex-start;">
@@ -492,7 +487,7 @@
           <div class="zt-row" style="gap:6px;flex-wrap:wrap;">
             <button class="zt-btn zt-btn-secondary" data-action="toggleFavHotel">${isFavHotel() ? '❤️ Salvat' : '🤍 Salvează'}</button>
             <button class="zt-btn zt-btn-secondary" data-action="shareLink">🔗 Copiază link</button>
-            ${hasRooms ? '<button class="zt-btn zt-btn-primary" data-action="reserveCheapest">⚡ Rezervare temporară</button>' : ''}
+            <button class="zt-btn zt-btn-primary" data-action="reserveCheapest">⚡ Rezervare temporară</button>
           </div>
         </div>
       </div>
