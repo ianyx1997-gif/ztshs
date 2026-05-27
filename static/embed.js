@@ -1027,19 +1027,16 @@
   }
 
   function shareWhatsApp(text) {
-    // Prefer native share API on mobile — handles UTF-8 emoji perfectly via OS-level share sheet
-    var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-    if (isMobile && navigator.share) {
-      navigator.share({ text: text }).catch(function(){});
-      return;
-    }
-    // Fallback: open WhatsApp URL in new tab/window
+    // Direct WhatsApp link — preserve emoji UTF-8 via proper percent-encoding
     var encoded = encodeURIComponent(text);
-    var url = isMobile
-      ? 'whatsapp://send?text=' + encoded
-      : 'https://web.whatsapp.com/send?text=' + encoded;
-    var w = window.open(url, '_blank');
-    if (!w) location.href = url;
+    var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    if (isMobile) {
+      // Open WhatsApp app directly (whatsapp:// scheme bypasses wa.me redirect that corrupts emoji)
+      location.href = 'whatsapp://send?text=' + encoded;
+    } else {
+      // Desktop: open WhatsApp Web in new tab
+      window.open('https://web.whatsapp.com/send?text=' + encoded, '_blank');
+    }
   }
 
   function copyFavText(f) {
