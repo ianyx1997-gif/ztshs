@@ -1,0 +1,147 @@
+{% extends "_layout.html" %}
+{% block title %}Rapoarte · {{ agency }}{% endblock %}
+{% block content %}
+<div x-data="reportsApp()" x-init="init()" class="space-y-4">
+
+  <div class="bg-white rounded-2xl shadow-sm border p-5">
+    <h1 class="text-xl font-bold">Rapoarte și analize</h1>
+    <p class="text-sm text-slate-500 mt-1">Date din baza locală — sincronizează cu SHS în pagina de Comenzi pentru a obține valori actualizate.</p>
+  </div>
+
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+    <template x-for="c in cards" :key="c.label">
+      <div class="bg-white rounded-xl shadow-sm border p-4">
+        <div class="text-xs text-slate-500 uppercase tracking-wide" x-text="c.label"></div>
+        <div class="text-2xl font-bold mt-1" x-text="c.value"></div>
+        <div class="text-xs text-slate-400 mt-1" x-text="c.hint"></div>
+      </div>
+    </template>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+
+    <div class="bg-white rounded-xl shadow-sm border p-5">
+      <h2 class="font-semibold mb-3">Evoluție lunară</h2>
+      <table class="w-full text-sm">
+        <thead class="text-xs text-slate-500 uppercase">
+          <tr><th class="text-left py-1">Lună</th><th class="text-right">Comenzi</th><th class="text-right">Venit</th></tr>
+        </thead>
+        <tbody>
+          <template x-for="m in data.by_month" :key="m.month">
+            <tr class="border-t">
+              <td class="py-1" x-text="m.month"></td>
+              <td class="text-right" x-text="m.cnt"></td>
+              <td class="text-right font-medium" x-text="formatMoney(m.revenue, 'EUR')"></td>
+            </tr>
+          </template>
+          <tr x-show="!data.by_month?.length"><td colspan="3" class="py-4 text-center text-slate-400">Fără date încă.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border p-5">
+      <h2 class="font-semibold mb-3">Distribuție statusuri</h2>
+      <div class="space-y-2">
+        <template x-for="s in data.by_status" :key="s.status">
+          <div>
+            <div class="flex justify-between text-sm mb-1">
+              <span><span class="px-2 py-0.5 text-xs rounded-full" :class="statusClassFn(s.status)" x-text="statusLabel(s.status)"></span></span>
+              <span class="font-medium" x-text="s.cnt + ' · ' + formatMoney(s.revenue, 'EUR')"></span>
+            </div>
+            <div class="h-2 rounded-full bg-slate-100 overflow-hidden">
+              <div class="h-full bg-brand-500" :style="`width:${(s.cnt / totalCnt) * 100}%`"></div>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border p-5">
+      <h2 class="font-semibold mb-3">Top destinații</h2>
+      <table class="w-full text-sm">
+        <thead class="text-xs text-slate-500 uppercase">
+          <tr><th class="text-left py-1">Destinație</th><th class="text-right">Comenzi</th><th class="text-right">Venit</th></tr>
+        </thead>
+        <tbody>
+          <template x-for="d in data.by_destination" :key="d.destination">
+            <tr class="border-t">
+              <td class="py-1" x-text="d.destination"></td>
+              <td class="text-right" x-text="d.cnt"></td>
+              <td class="text-right" x-text="formatMoney(d.revenue, 'EUR')"></td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border p-5">
+      <h2 class="font-semibold mb-3">Top hoteluri</h2>
+      <table class="w-full text-sm">
+        <thead class="text-xs text-slate-500 uppercase">
+          <tr><th class="text-left py-1">Hotel</th><th class="text-right">Comenzi</th><th class="text-right">Venit</th></tr>
+        </thead>
+        <tbody>
+          <template x-for="h in data.by_hotel" :key="h.hotel_name">
+            <tr class="border-t">
+              <td class="py-1 truncate max-w-[200px]" x-text="h.hotel_name"></td>
+              <td class="text-right" x-text="h.cnt"></td>
+              <td class="text-right" x-text="formatMoney(h.revenue, 'EUR')"></td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border p-5">
+    <h2 class="font-semibold mb-3">Jurnal acțiuni</h2>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="text-xs text-slate-500 uppercase">
+          <tr><th class="text-left py-1">Când</th><th class="text-left">Agent</th><th class="text-left">Acțiune</th><th class="text-left">Țintă</th><th class="text-left">Detalii</th></tr>
+        </thead>
+        <tbody>
+          <template x-for="a in audit" :key="a.id">
+            <tr class="border-t hover:bg-slate-50">
+              <td class="py-1 text-xs text-slate-500" x-text="formatDate(a.created_at)"></td>
+              <td x-text="a.actor"></td>
+              <td><span class="font-mono text-xs bg-slate-100 px-1.5 py-0.5 rounded" x-text="a.action"></span></td>
+              <td x-text="a.target"></td>
+              <td class="text-xs text-slate-500 truncate max-w-[400px]" x-text="a.details"></td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function reportsApp() {
+  return {
+    data: { by_status:[], by_destination:[], by_hotel:[], by_month:[], summary:{} },
+    audit: [], cards: [],
+    async init() {
+      const s = await api.get('/api/reports/summary');
+      this.data = s;
+      const a = await api.get('/api/audit');
+      this.audit = a.items || [];
+      this.cards = [
+        { label: 'Total comenzi', value: s.summary.total ?? 0, hint: 'în istoric' },
+        { label: 'Venit total estimat', value: formatMoney(s.summary.revenue ?? 0, 'EUR'), hint: 'după markup' },
+        { label: 'Venit confirmat', value: formatMoney(s.summary.confirmed_revenue ?? 0, 'EUR'), hint: 'doar confirmate' },
+        { label: 'Ticket mediu', value: formatMoney(s.summary.avg_ticket ?? 0, 'EUR'), hint: 'pe comandă' },
+      ];
+    },
+    get totalCnt() {
+      return (this.data.by_status || []).reduce((sum, s) => sum + (s.cnt || 0), 0) || 1;
+    },
+    statusLabel(s) { return statusLabel(s); },
+    statusClassFn(s) { return statusClassFn(s); },
+    formatMoney, formatDate,
+  }
+}
+</script>
+{% endblock %}

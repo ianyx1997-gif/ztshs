@@ -1,0 +1,977 @@
+{% extends "_layout.html" %}
+{% block title %}Căutare · {{ agency }}{% endblock %}
+{% block content %}
+<div x-data="searchApp()" x-init="init()" class="space-y-4">
+
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 md:p-5">
+    <div class="flex flex-wrap gap-2 mb-4 border-b pb-3">
+      <template x-for="t in tabs" :key="t.key">
+        <button @click="setTab(t.key)"
+                :class="tab===t.key ? 'bg-brand-600 text-white' : 'bg-slate-100 hover:bg-slate-200'"
+                class="px-3 py-1.5 rounded-lg text-sm font-medium">
+          <span x-text="t.icon + ' ' + t.label"></span>
+        </button>
+      </template>
+      <div class="flex-1"></div>
+      <button @click="saveCurrentSearch()" class="px-3 py-1.5 text-sm bg-slate-50 hover:bg-slate-100 rounded-lg border">💾 Salvează</button>
+    </div>
+
+    <!-- PACHET -->
+    <div x-show="tab==='package'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div>
+        <label class="text-xs text-slate-500 font-medium">Țara destinație</label>
+        <select x-model.number="form.pkg.country_id" @change="onPkgCountryChange()" class="w-full mt-1 border rounded-lg px-2 py-1.5">
+          <option value="">— alege —</option>
+          <template x-for="c in countries" :key="c.Id || c.id"><option :value="c.Id || c.id" x-text="c.Name || c.name"></option></template>
+        </select>
+      </div>
+      <div>
+        <label class="text-xs text-slate-500 font-medium">Tip pachet</label>
+        <select x-model.number="form.pkg.package_id" @change="syncTerminalToPackage()" class="w-full mt-1 border rounded-lg px-2 py-1.5">
+          <option value="">— alege —</option>
+          <template x-for="p in packages" :key="p.Id || p.id">
+            <option :value="p.Id || p.id" x-text="packageLabel(p)"></option>
+          </template>
+        </select>
+        <div class="text-xs text-slate-400 mt-0.5" x-text="packageContentHint()"></div>
+      </div>
+      <div>
+        <label class="text-xs text-slate-500 font-medium">Plecare din</label>
+        <select x-model.number="form.pkg.departure_terminal_id" class="w-full mt-1 border rounded-lg px-2 py-1.5">
+          <option value="">— alege —</option>
+          <template x-for="t in pkgTerminals" :key="t.id"><option :value="t.id" x-text="t.name"></option></template>
+        </select>
+        <div class="text-xs text-slate-400 mt-0.5" x-show="pkgTerminals.length" x-text="pkgTerminals.length + ' terminale permise de pachet'"></div>
+      </div>
+      <div>
+        <label class="text-xs text-slate-500 font-medium">Adulți / Copii (vârste)</label>
+        <div class="flex gap-1 mt-1">
+          <input type="number" min="1" max="9" x-model.number="form.pkg.adults" class="w-16 border rounded-lg px-2 py-1.5">
+          <input type="text" x-model="form.pkg.children_str" placeholder="ex: 5,10" class="flex-1 border rounded-lg px-2 py-1.5">
+        </div>
+      </div>
+      <div>
+        <label class="text-xs text-slate-500 font-medium">Plecare între</label>
+        <div class="flex gap-1 mt-1">
+          <input type="date" x-model="form.pkg.from_date" class="border rounded-lg px-2 py-1.5 w-full">
+          <input type="date" x-model="form.pkg.to_date" class="border rounded-lg px-2 py-1.5 w-full">
+        </div>
+      </div>
+      <div>
+        <label class="text-xs text-slate-500 font-medium">Nopți</label>
+        <div class="flex gap-1 mt-1">
+          <input type="number" min="1" max="30" x-model.number="form.pkg.from_nights" class="w-20 border rounded-lg px-2 py-1.5" placeholder="min">
+          <input type="number" min="1" max="30" x-model.number="form.pkg.to_nights" class="w-20 border rounded-lg px-2 py-1.5" placeholder="max">
+        </div>
+      </div>
+      <div>
+        <label class="text-xs text-slate-500 font-medium">Masă</label>
+        <select multiple x-model="form.pkg.meal_ids" class="w-full mt-1 border rounded-lg px-2 py-1.5 h-20">
+          <template x-for="m in meals" :key="m.Id || m.id"><option :value="m.Id || m.id" x-text="(m.Code||m.code||'') + ' — ' + (m.Name||m.name||'')"></option></template>
+        </select>
+      </div>
+      <div>
+        <label class="text-xs text-slate-500 font-medium">Stele</label>
+        <select multiple x-model="form.pkg.star_ids" class="w-full mt-1 border rounded-lg px-2 py-1.5 h-20">
+          <template x-for="c in categories" :key="c.Id || c.id"><option :value="c.Id || c.id" x-text="c.Name || c.name"></option></template>
+        </select>
+      </div>
+      <div class="lg:col-span-2">
+        <label class="text-xs text-slate-500 font-medium">Facilități hotel (multi-select)</label>
+        <select multiple x-model="form.pkg.facility_ids" class="w-full mt-1 border rounded-lg px-2 py-1.5 h-20">
+          <template x-for="f in facilities" :key="f.id">
+            <option :value="f.id" x-text="(f.translation && f.translation.ro) || f.name"></option>
+          </template>
+        </select>
+        <div class="text-xs text-slate-400 mt-0.5">Ex: Prima linie, Piscină, Aquapark, Adult Only, Umbrele plajă</div>
+      </div>
+    </div>
+
+    <!-- HOTEL -->
+    <div x-show="tab==='hotel'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div class="lg:col-span-2">
+        <label class="text-xs text-slate-500 font-medium">Hoteluri (selectează unul sau mai multe)</label>
+        <select multiple x-model="form.hotel.hotel_ids" class="w-full mt-1 border rounded-lg px-2 py-1.5 h-28">
+          <template x-for="h in hotelOptions" :key="h.Id || h.id"><option :value="h.Id || h.id" x-text="(h.Name || h.name) + ' — ' + (h.CityName || h.city || '')"></option></template>
+        </select>
+        <button @click="loadHotelDirectory()" class="mt-1 text-xs text-brand-600 hover:underline">↻ încarcă lista hoteluri</button>
+      </div>
+      <div>
+        <label class="text-xs text-slate-500 font-medium">Cazare între</label>
+        <div class="flex gap-1 mt-1">
+          <input type="date" x-model="form.hotel.from_date" class="border rounded-lg px-2 py-1.5 w-full">
+          <input type="date" x-model="form.hotel.to_date" class="border rounded-lg px-2 py-1.5 w-full">
+        </div>
+      </div>
+      <div>
+        <label class="text-xs text-slate-500 font-medium">Nopți / Adulți / Copii</label>
+        <div class="flex gap-1 mt-1">
+          <input type="number" min="1" max="30" x-model.number="form.hotel.from_nights" class="w-16 border rounded-lg px-2 py-1.5">
+          <input type="number" min="1" max="30" x-model.number="form.hotel.to_nights" class="w-16 border rounded-lg px-2 py-1.5">
+          <input type="number" min="1" max="9" x-model.number="form.hotel.adults" class="w-16 border rounded-lg px-2 py-1.5">
+          <input type="text" x-model="form.hotel.children_str" placeholder="copii: 5,10" class="flex-1 border rounded-lg px-2 py-1.5">
+        </div>
+      </div>
+      <div>
+        <label class="text-xs text-slate-500 font-medium">Masă</label>
+        <select multiple x-model="form.hotel.meal_ids" class="w-full mt-1 border rounded-lg px-2 py-1.5 h-20">
+          <template x-for="m in meals" :key="m.Id || m.id"><option :value="m.Id || m.id" x-text="(m.Code||m.code||'') + ' — ' + (m.Name||m.name||'')"></option></template>
+        </select>
+      </div>
+    </div>
+
+    <!-- TRANSPORT -->
+    <div x-show="tab==='transport'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div>
+        <label class="text-xs text-slate-500 font-medium">Plecare</label>
+        <select x-model="form.tr.departure" class="w-full mt-1 border rounded-lg px-2 py-1.5">
+          <option value="">— alege —</option>
+          <template x-for="t in terminals" :key="t.Id"><option :value="t.Code" x-text="t.Name + ' (' + t.Code + ')'"></option></template>
+        </select>
+      </div>
+      <div>
+        <label class="text-xs text-slate-500 font-medium">Destinații</label>
+        <select multiple x-model="form.tr.destinations" class="w-full mt-1 border rounded-lg px-2 py-1.5 h-20">
+          <template x-for="t in terminals" :key="t.Id"><option :value="t.Code" x-text="t.Name"></option></template>
+        </select>
+      </div>
+      <div>
+        <label class="text-xs text-slate-500 font-medium">Plecare între</label>
+        <div class="flex gap-1 mt-1">
+          <input type="date" x-model="form.tr.from_date" class="border rounded-lg px-2 py-1.5 w-full">
+          <input type="date" x-model="form.tr.to_date" class="border rounded-lg px-2 py-1.5 w-full">
+        </div>
+      </div>
+      <div>
+        <label class="text-xs text-slate-500 font-medium">Zile tour / pasageri</label>
+        <div class="flex gap-1 mt-1">
+          <input type="number" min="1" max="30" x-model.number="form.tr.days_from" class="w-16 border rounded-lg px-2 py-1.5">
+          <input type="number" min="1" max="30" x-model.number="form.tr.days_to" class="w-16 border rounded-lg px-2 py-1.5">
+          <input type="number" min="1" max="9" x-model.number="form.tr.adults" class="w-16 border rounded-lg px-2 py-1.5">
+          <input type="text" x-model="form.tr.children_str" placeholder="copii" class="flex-1 border rounded-lg px-2 py-1.5">
+        </div>
+      </div>
+      <div class="flex items-center gap-3 lg:col-span-2 mt-2">
+        <label class="text-sm flex items-center gap-2"><input type="checkbox" x-model="form.tr.outbound"> Dus</label>
+        <label class="text-sm flex items-center gap-2"><input type="checkbox" x-model="form.tr.inbound"> Întors</label>
+        <select x-model="form.tr.period_type" class="border rounded-lg px-2 py-1.5">
+          <option value="departure_range">interval plecare</option>
+          <option value="return_range">interval întoarcere</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- EXCURSIE -->
+    <div x-show="tab==='excursion'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div>
+        <label class="text-xs text-slate-500 font-medium">Țara</label>
+        <select x-model.number="form.exc.country_id" @change="loadExcursionList()" class="w-full mt-1 border rounded-lg px-2 py-1.5">
+          <option value="">— alege —</option>
+          <template x-for="c in excCountries" :key="c.id || c.Id"><option :value="c.id || c.Id" x-text="c.name || c.Name"></option></template>
+        </select>
+      </div>
+      <div>
+        <label class="text-xs text-slate-500 font-medium">Plecare</label>
+        <select x-model.number="form.exc.departure_id" class="w-full mt-1 border rounded-lg px-2 py-1.5">
+          <option value="">— oricare —</option>
+          <template x-for="d in excDepartures" :key="d.id || d.Id"><option :value="d.id || d.Id" x-text="d.name || d.Name"></option></template>
+        </select>
+      </div>
+      <div>
+        <label class="text-xs text-slate-500 font-medium">Program</label>
+        <select multiple x-model="form.exc.excursion_ids" class="w-full mt-1 border rounded-lg px-2 py-1.5 h-20">
+          <template x-for="e in excursionList" :key="e.excursion_id || e.id"><option :value="e.excursion_id || e.id" x-text="e.name || e.description?.slice(0,60)"></option></template>
+        </select>
+      </div>
+      <div>
+        <label class="text-xs text-slate-500 font-medium">Date / Pasageri</label>
+        <div class="flex gap-1 mt-1">
+          <input type="date" x-model="form.exc.date_from" class="border rounded-lg px-2 py-1.5 w-full">
+          <input type="date" x-model="form.exc.date_to" class="border rounded-lg px-2 py-1.5 w-full">
+        </div>
+        <div class="flex gap-1 mt-1">
+          <input type="number" min="1" max="9" x-model.number="form.exc.adults" class="w-16 border rounded-lg px-2 py-1.5">
+          <input type="text" x-model="form.exc.children_str" placeholder="vârste copii" class="flex-1 border rounded-lg px-2 py-1.5">
+          <select x-model="form.exc.trip_type" class="border rounded-lg px-2 py-1.5">
+            <option value="excursion">excursie</option>
+            <option value="package">pachet</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- TRANSFER -->
+    <div x-show="tab==='transfer'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div>
+        <label class="text-xs text-slate-500 font-medium">De la</label>
+        <select x-model.number="form.tf.departure_id" class="w-full mt-1 border rounded-lg px-2 py-1.5">
+          <option value="">— alege —</option>
+          <template x-for="t in terminals" :key="t.Id"><option :value="t.Id" x-text="t.Name"></option></template>
+        </select>
+      </div>
+      <div>
+        <label class="text-xs text-slate-500 font-medium">Spre</label>
+        <select x-model.number="form.tf.arrival_id" class="w-full mt-1 border rounded-lg px-2 py-1.5">
+          <option value="">— alege —</option>
+          <template x-for="t in terminals" :key="t.Id"><option :value="t.Id" x-text="t.Name"></option></template>
+        </select>
+      </div>
+      <div>
+        <label class="text-xs text-slate-500 font-medium">Data / Pasageri</label>
+        <div class="flex gap-1 mt-1">
+          <input type="date" x-model="form.tf.date" class="border rounded-lg px-2 py-1.5 w-full">
+          <input type="number" min="1" max="20" x-model.number="form.tf.adults" class="w-16 border rounded-lg px-2 py-1.5">
+        </div>
+      </div>
+      <div>
+        <label class="text-xs text-slate-500 font-medium">Tip transfer</label>
+        <select x-model="form.tf.transfer_type" class="w-full mt-1 border rounded-lg px-2 py-1.5">
+          <option value="">oricare</option>
+          <option value="group">de grup</option>
+          <option value="individual">individual</option>
+          <option value="vip">VIP</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="mt-4 pt-3 border-t flex flex-wrap items-center gap-2">
+      <label class="text-sm text-slate-600 mr-2">Markup %:
+        <input type="number" min="0" max="100" step="0.5" x-model.number="markup" class="w-20 border rounded px-2 py-1 ml-1">
+      </label>
+      <button @click="runSearch()" class="bg-brand-600 hover:bg-brand-700 text-white font-semibold px-5 py-2 rounded-lg shadow-sm" :disabled="busy">
+        <span x-show="!busy">🔍 Caută</span>
+        <span x-show="busy">Se caută...</span>
+      </button>
+      <span class="text-xs text-slate-500" x-show="lastSearchTime" x-text="'rezultate: ' + lastSearchTime + 'ms'"></span>
+      <div class="flex-1"></div>
+      <button @click="showSaved = !showSaved" class="text-sm text-brand-600 hover:underline">📑 Căutări salvate</button>
+    </div>
+
+    <div x-show="showSaved" class="mt-3 border-t pt-3">
+      <template x-if="!savedSearches.length"><div class="text-sm text-slate-400">Nu există căutări salvate.</div></template>
+      <div class="flex flex-wrap gap-2">
+        <template x-for="s in savedSearches" :key="s.id">
+          <div class="bg-slate-100 rounded-lg px-3 py-1.5 text-sm flex items-center gap-2">
+            <button @click="restoreSearch(s)" class="font-medium hover:text-brand-600" x-text="s.name + ' (' + s.kind + ')'"></button>
+            <button @click="deleteSaved(s.id)" class="text-slate-400 hover:text-red-500" title="șterge">×</button>
+          </div>
+        </template>
+      </div>
+    </div>
+  </div>
+
+  <!-- REZULTATE -->
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 md:p-5" x-show="results || error">
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="font-semibold text-lg">Rezultate</h2>
+      <div class="text-sm text-slate-500" x-text="resultsLabel"></div>
+    </div>
+
+    <div x-show="error" class="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-sm" x-text="error"></div>
+
+    <!-- Pachete -->
+    <div x-show="tab==='package' && results?.prices?.length" class="space-y-2">
+      <template x-for="p in results.prices" :key="p.price_id">
+        <div class="border rounded-lg overflow-hidden hover:shadow-md transition flex flex-wrap items-stretch">
+          <!-- Photo thumbnail -->
+          <button @click="openHotelDetails(p)" class="w-32 h-32 flex-shrink-0 bg-slate-100 cursor-pointer overflow-hidden flex items-center justify-center">
+            <template x-if="p.default_photo">
+              <img :src="p.default_photo" class="w-full h-full object-cover hover:scale-110 transition" loading="lazy" onerror="this.style.display='none'">
+            </template>
+            <template x-if="!p.default_photo">
+              <div class="text-4xl">🏨</div>
+            </template>
+          </button>
+
+          <div class="flex-1 min-w-[260px] p-3 flex flex-col">
+            <div class="flex items-start gap-2 flex-wrap">
+              <button @click="openHotelDetails(p)" class="font-semibold text-left hover:text-brand-600 hover:underline" x-text="p.hotel_name"></button>
+              <span x-show="p.star" class="text-amber-500 text-sm font-bold" x-text="p.star"></span>
+              <span x-show="p.spo" class="px-1.5 py-0.5 bg-purple-100 text-purple-700 text-xs rounded font-medium">SPO</span>
+              <span x-show="p.on_request" class="px-1.5 py-0.5 bg-yellow-100 text-yellow-700 text-xs rounded font-medium">la cerere</span>
+              <span x-show="p.stop_sale" class="px-1.5 py-0.5 bg-red-100 text-red-700 text-xs rounded font-medium">stop sale</span>
+              <span x-show="p.free_nights" class="px-1.5 py-0.5 bg-green-100 text-green-700 text-xs rounded font-medium" x-text="'🎁 ' + p.free_nights"></span>
+            </div>
+            <div class="text-xs text-slate-500 mt-0.5" x-text="(p.city || '') + ' · ' + p.placement + ' · ' + p.meal + ' · ' + p.room_type"></div>
+            <div class="text-sm mt-1">
+              <span class="font-medium" x-text="'📅 ' + (p.check_in || p.departure_date || '—')"></span>
+              <span class="text-slate-400 mx-1">→</span>
+              <span class="font-medium" x-text="p.check_out || p.retur_departure_date || '—'"></span>
+              <span class="text-slate-500" x-text="' · ' + p.nights + ' nopți'"></span>
+            </div>
+            <div x-show="p.discount" class="mt-1">
+              <span class="px-1.5 py-0.5 bg-red-50 text-red-700 text-xs rounded font-medium" x-text="'🏷️ ' + p.discount"></span>
+            </div>
+            <div class="mt-1 flex flex-wrap gap-1" x-show="(p.facility_ids||[]).length">
+              <template x-for="fid in (p.facility_ids||[]).slice(0,8)" :key="fid">
+                <span class="px-1.5 py-0.5 bg-slate-100 text-slate-700 text-xs rounded" x-text="facilityLabel(fid)"></span>
+              </template>
+            </div>
+            <div class="mt-auto pt-2 flex gap-3 text-xs">
+              <button @click="openHotelDetails(p)" class="text-brand-600 hover:underline">📷 Poze & descriere</button>
+              <button @click="loadHotelRooms(p)" class="text-brand-600 hover:underline">🛏️ Toate camerele</button>
+            </div>
+          </div>
+
+          <div class="border-l border-slate-100 px-4 py-3 bg-slate-50 flex flex-col justify-between min-w-[180px]">
+            <div class="text-right">
+              <div class="text-xs text-slate-500 uppercase tracking-wide">Net SHS</div>
+              <div class="text-lg font-semibold text-slate-700" x-text="formatMoney(p.net_shs ?? p.net_amount, p.currency)"></div>
+            </div>
+            <div class="text-right border-t border-slate-300 pt-2 mt-2">
+              <div class="text-xs text-slate-500 uppercase tracking-wide">Brut Zebra Tur</div>
+              <div class="text-2xl font-bold text-brand-700" x-text="formatMoney(p.brut_zebra ?? p.gross_amount, p.currency)"></div>
+              <div class="text-xs text-green-700 font-medium" x-text="'profit: ' + formatMoney(p.agent_profit || 0, p.currency)"></div>
+            </div>
+            <div class="flex gap-1 mt-2">
+              <button @click="openBooking(p, 'package')" class="flex-1 bg-brand-600 hover:bg-brand-700 text-white px-2 py-1.5 rounded text-xs font-medium">Rezervă</button>
+              <button @click="quoteOption(p, 'package')" class="bg-white border hover:bg-slate-50 px-2 py-1.5 rounded text-xs">+ Ofertă</button>
+            </div>
+          </div>
+        </div>
+      </template>
+      <div class="flex justify-between mt-3" x-show="(results.total_pages||0) > 1">
+        <button @click="page--; runSearch(true)" :disabled="page<=1" class="bg-slate-100 px-3 py-1.5 rounded">← Anterior</button>
+        <div class="text-sm text-slate-500" x-text="'Pagina ' + (results.current_page||page) + ' / ' + (results.total_pages||1)"></div>
+        <button @click="page++; runSearch(true)" :disabled="(results.current_page||page)>=results.total_pages" class="bg-slate-100 px-3 py-1.5 rounded">Următor →</button>
+      </div>
+    </div>
+
+    <!-- HOTEL DETAILS MODAL -->
+    <div x-show="hotelDetailsOpen" x-cloak class="fixed inset-0 bg-black/60 z-50 flex items-start justify-center p-4 overflow-y-auto">
+      <div @click.away="hotelDetailsOpen=false" class="bg-white rounded-2xl shadow-2xl max-w-5xl w-full my-4">
+        <div class="p-5 border-b flex justify-between items-start sticky top-0 bg-white z-10">
+          <div x-show="hotelDetails">
+            <div class="flex items-center gap-2">
+              <h3 class="font-bold text-2xl" x-text="hotelDetails?.hotel_name"></h3>
+              <span class="text-amber-500 font-bold" x-text="hotelDetails?.star"></span>
+            </div>
+            <div class="text-sm text-slate-500" x-text="(hotelDetails?.country || '') + ' · ' + (hotelDetails?.city || '')"></div>
+          </div>
+          <button @click="hotelDetailsOpen=false" class="text-slate-400 hover:text-slate-600 text-3xl leading-none">×</button>
+        </div>
+
+        <div x-show="hotelDetailsLoading" class="p-12 text-center text-slate-400">Se încarcă detaliile...</div>
+
+        <div x-show="!hotelDetailsLoading && hotelDetails" class="p-5">
+          <!-- PHOTO GALLERY -->
+          <div x-show="hotelDetails?.photos?.length" class="relative bg-slate-900 rounded-xl overflow-hidden mb-4" style="height: 420px;">
+            <template x-for="(photo, i) in hotelDetails?.photos || []" :key="i">
+              <img :src="photo" x-show="hotelPhotoIndex === i" class="absolute inset-0 w-full h-full object-contain" loading="lazy" onerror="this.style.display='none'">
+            </template>
+            <button @click="prevPhoto()" x-show="(hotelDetails?.photos?.length || 0) > 1" class="absolute left-3 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full w-10 h-10 flex items-center justify-center text-2xl font-bold">‹</button>
+            <button @click="nextPhoto()" x-show="(hotelDetails?.photos?.length || 0) > 1" class="absolute right-3 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full w-10 h-10 flex items-center justify-center text-2xl font-bold">›</button>
+            <div class="absolute bottom-3 left-1/2 -translate-x-1/2 bg-black/70 text-white px-3 py-1 rounded-full text-sm" x-show="(hotelDetails?.photos?.length || 0) > 1" x-text="(hotelPhotoIndex+1) + ' / ' + hotelDetails?.photos?.length"></div>
+          </div>
+
+          <!-- THUMBNAILS -->
+          <div x-show="(hotelDetails?.photos?.length || 0) > 1" class="flex gap-2 overflow-x-auto pb-2 mb-4">
+            <template x-for="(photo, i) in hotelDetails?.photos || []" :key="'th'+i">
+              <img :src="photo" @click="hotelPhotoIndex = i" :class="hotelPhotoIndex === i ? 'ring-2 ring-brand-500' : 'opacity-70 hover:opacity-100'" class="w-20 h-16 object-cover rounded cursor-pointer flex-shrink-0" loading="lazy" onerror="this.style.display='none'">
+            </template>
+          </div>
+
+          <!-- DESCRIPTION -->
+          <div x-show="hotelDetails?.description" class="prose prose-sm max-w-none border-t pt-4 mb-4" x-html="hotelDetails?.description"></div>
+
+          <!-- MAP -->
+          <div x-show="hotelDetails?.map_frame" class="border-t pt-4">
+            <h4 class="font-semibold mb-2">📍 Locație</h4>
+            <div class="rounded-lg overflow-hidden border" style="height: 320px;" x-html="hotelDetails?.map_frame"></div>
+          </div>
+        </div>
+
+        <div class="p-5 border-t bg-slate-50 flex justify-end gap-2 sticky bottom-0">
+          <button @click="hotelDetailsOpen=false" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 rounded">Închide</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- HOTEL ROOMS MODAL -->
+    <div x-show="hotelRoomsOpen" x-cloak class="fixed inset-0 bg-black/50 z-40 flex items-start justify-center p-4 overflow-y-auto">
+      <div @click.away="hotelRoomsOpen=false" class="bg-white rounded-2xl shadow-2xl max-w-5xl w-full my-8">
+        <div class="p-5 border-b flex justify-between items-start sticky top-0 bg-white">
+          <div>
+            <h3 class="font-bold text-xl" x-text="hotelRoomsTitle"></h3>
+            <div class="text-sm text-slate-500" x-text="hotelRoomsSubtitle"></div>
+          </div>
+          <button @click="hotelRoomsOpen=false" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">×</button>
+        </div>
+        <div class="p-3">
+          <div x-show="hotelRoomsLoading" class="text-center py-8 text-slate-400">Se încarcă camerele...</div>
+          <div x-show="!hotelRoomsLoading && !hotelRoomsList.length" class="text-center py-8 text-slate-400">Nu s-au găsit camere pentru filtrele actuale.</div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm" x-show="hotelRoomsList.length">
+              <thead class="bg-slate-50 text-xs text-slate-600 uppercase">
+                <tr>
+                  <th class="text-left p-2">Masă</th>
+                  <th class="text-left">Cameră</th>
+                  <th class="text-left">Plasare</th>
+                  <th class="text-left">Check-in → Check-out</th>
+                  <th class="text-center">Nopți</th>
+                  <th class="text-right">Net</th>
+                  <th class="text-right">Vânzare</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="r in hotelRoomsList" :key="r.price_id">
+                  <tr class="border-t hover:bg-slate-50">
+                    <td class="p-2"><span class="px-1.5 py-0.5 bg-brand-100 text-brand-800 text-xs rounded font-medium" x-text="r.meal"></span></td>
+                    <td class="font-medium" x-text="r.room_type"></td>
+                    <td class="text-xs text-slate-500" x-text="r.placement"></td>
+                    <td class="text-xs" x-text="r.check_in + ' → ' + r.check_out"></td>
+                    <td class="text-center" x-text="r.nights"></td>
+                    <td class="text-right text-slate-500" x-text="formatMoney(r.net_amount, r.currency)"></td>
+                    <td class="text-right font-bold text-brand-700" x-text="formatMoney(r.sale_amount || r.gross_amount, r.currency)"></td>
+                    <td class="text-right pr-2">
+                      <button @click="openBooking({...r, hotel_name: hotelRoomsTitle.split(' (')[0]}, 'package')" class="bg-brand-600 hover:bg-brand-700 text-white px-2 py-1 rounded text-xs">Rezervă</button>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="p-3 border-t bg-slate-50 text-xs text-slate-500" x-text="hotelRoomsList.length + ' variante disponibile'"></div>
+      </div>
+    </div>
+
+    <!-- Hoteluri -->
+    <div x-show="tab==='hotel' && results?.hotels?.length" class="space-y-3">
+      <template x-for="h in results.hotels" :key="h.hotel_id">
+        <div class="border rounded-lg p-3">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="font-semibold" x-text="h.hotel_name"></div>
+              <div class="text-xs text-slate-500" x-text="(h.country||'') + ' · ' + (h.city||'') + ' · ' + (h.star||'')"></div>
+            </div>
+          </div>
+          <div class="mt-2 grid gap-2">
+            <template x-for="r in h.rooms" :key="r.price_id">
+              <div class="bg-slate-50 rounded px-3 py-2 flex items-center justify-between gap-3 flex-wrap">
+                <div class="text-sm">
+                  <span class="font-medium" x-text="r.room_type"></span>
+                  <span class="text-slate-500" x-text="' · ' + r.meal + ' · ' + r.nights + ' nopți · ' + r.check_in + ' → ' + r.check_out"></span>
+                </div>
+                <div class="text-right">
+                  <span class="font-bold text-brand-700" x-text="formatMoney(r.sale_price || r.price, r.currency)"></span>
+                </div>
+                <div class="flex gap-1">
+                  <button @click="openBooking({...r, hotel_name:h.hotel_name, country:h.country, city:h.city}, 'hotel')" class="bg-brand-600 hover:bg-brand-700 text-white px-2 py-1 rounded text-xs">Rezervă</button>
+                  <button @click="quoteOption({...r, hotel_name:h.hotel_name}, 'hotel')" class="bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded text-xs">+ Ofertă</button>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+      </template>
+    </div>
+
+    <!-- Transport -->
+    <div x-show="tab==='transport' && results?.items?.length" class="space-y-2">
+      <template x-for="(t, idx) in results.items" :key="idx">
+        <div class="border rounded-lg p-3 flex flex-wrap items-center gap-3">
+          <div class="flex-1 min-w-[200px]">
+            <div class="font-semibold" x-text="t.departure_terminal + ' → ' + t.arrival_terminal"></div>
+            <div class="text-xs text-slate-500" x-text="'Plecare: ' + t.departure_date + ' ' + (t.departure_time||'') + ' · Întoarcere: ' + (t.retur_departure_date||'—') + ' ' + (t.retur_departure_time||'')"></div>
+            <div class="text-xs text-slate-500" x-text="t.adults + ' adulți, ' + t.children + ' copii · ' + t.nights + ' nopți / ' + t.tour_days + ' zile'"></div>
+          </div>
+          <div class="text-right">
+            <div class="text-xl font-bold text-brand-700" x-text="formatMoney(t.gross_amount, 'EUR')"></div>
+          </div>
+          <div class="flex gap-1">
+            <button @click="openBooking(t, 'transport')" class="bg-brand-600 hover:bg-brand-700 text-white px-3 py-1.5 rounded text-sm">Rezervă</button>
+            <a :href="t.template_url" target="_blank" class="bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded text-sm">Locuri</a>
+          </div>
+        </div>
+      </template>
+    </div>
+
+    <!-- Excursii -->
+    <div x-show="tab==='excursion' && results?.data?.length" class="space-y-2">
+      <template x-for="(e, idx) in results.data" :key="idx">
+        <div class="border rounded-lg p-3 flex flex-wrap items-start gap-3">
+          <img x-show="e.photo" :src="e.photo" class="w-24 h-24 object-cover rounded" onerror="this.style.display='none'">
+          <div class="flex-1 min-w-[200px]">
+            <div class="font-semibold" x-text="e.name || e.description?.slice(0,80)"></div>
+            <div class="text-xs text-slate-500" x-text="(e.country?.name||'') + ' · plecare: ' + (e.departure?.name||'')"></div>
+            <div class="text-xs text-slate-500" x-text="'Date: ' + e.date_start + ' → ' + e.date_end + ' · ' + e.nights + ' nopți'"></div>
+          </div>
+          <div class="text-right">
+            <div class="text-xl font-bold text-brand-700" x-text="formatMoney(e.price, e.currency)"></div>
+          </div>
+          <button @click="openBooking(e, 'excursion')" class="bg-brand-600 hover:bg-brand-700 text-white px-3 py-1.5 rounded text-sm">Rezervă</button>
+        </div>
+      </template>
+    </div>
+
+    <!-- Transfer -->
+    <div x-show="tab==='transfer' && results?.items?.length" class="space-y-2">
+      <template x-for="(t, idx) in results.items" :key="idx">
+        <div class="border rounded-lg p-3 flex items-center justify-between">
+          <div>
+            <div class="font-semibold" x-text="t.name || t.transfer_type || 'Transfer'"></div>
+            <div class="text-xs text-slate-500" x-text="t.description || ''"></div>
+          </div>
+          <div class="text-right">
+            <div class="font-bold text-brand-700" x-text="formatMoney(t.price || t.gross_amount, t.currency || 'EUR')"></div>
+          </div>
+        </div>
+      </template>
+    </div>
+  </div>
+
+  <!-- BOOKING MODAL -->
+  <div x-show="bookingOpen" x-cloak class="fixed inset-0 bg-black/50 z-40 flex items-center justify-center p-4">
+    <div @click.away="bookingOpen=false" class="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+      <div class="p-5 border-b flex justify-between items-start">
+        <div>
+          <h3 class="font-bold text-xl">Rezervare</h3>
+          <div class="text-sm text-slate-500 mt-1" x-text="bookingSnapshot.label"></div>
+        </div>
+        <button @click="bookingOpen=false" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">×</button>
+      </div>
+
+      <div class="p-5">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4 p-3 bg-slate-50 rounded-lg">
+          <div><div class="text-xs text-slate-500">Hotel</div><div class="font-medium" x-text="bookingSnapshot.hotel_name||'—'"></div></div>
+          <div><div class="text-xs text-slate-500">Plecare</div><div class="font-medium" x-text="bookingSnapshot.departure_date||bookingSnapshot.check_in||'—'"></div></div>
+          <div><div class="text-xs text-slate-500">Suma vânzare</div><div class="font-bold text-brand-700" x-text="formatMoney(bookingSnapshot.sale_amount || bookingSnapshot.gross_amount || bookingSnapshot.price, bookingSnapshot.currency)"></div></div>
+        </div>
+
+        <div class="mb-3 flex items-center justify-between">
+          <h4 class="font-semibold">Pasageri (<span x-text="customers.length"></span>)</h4>
+          <div class="flex gap-2">
+            <button @click="customerSearchOpen=!customerSearchOpen" class="text-sm bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded">👥 Din baza</button>
+            <button @click="addCustomerRow()" class="text-sm bg-brand-50 hover:bg-brand-100 text-brand-700 px-3 py-1.5 rounded">+ Adaugă</button>
+          </div>
+        </div>
+
+        <div x-show="customerSearchOpen" class="border rounded-lg p-3 mb-3 bg-slate-50">
+          <input type="text" x-model="customerSearchQ" @input.debounce.300ms="searchCustomers()" placeholder="caută după nume, telefon, email..." class="w-full border rounded px-2 py-1.5">
+          <div class="mt-2 max-h-40 overflow-y-auto">
+            <template x-for="c in customerSearchResults" :key="c.id">
+              <button @click="useCustomer(c)" class="block w-full text-left px-3 py-1.5 hover:bg-white rounded">
+                <span class="font-medium" x-text="c.surname + ' ' + c.name"></span>
+                <span class="text-xs text-slate-500" x-text="' · ' + (c.telephone||'—') + ' · ' + (c.email||'—')"></span>
+              </button>
+            </template>
+          </div>
+        </div>
+
+        <div class="space-y-3">
+          <template x-for="(c, i) in customers" :key="i">
+            <div class="border rounded-lg p-3 bg-white">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-sm font-semibold text-slate-600" x-text="'Pasager #' + (i+1)"></span>
+                <div class="flex gap-2 items-center">
+                  <label class="text-xs flex items-center gap-1"><input type="checkbox" x-model="c.Infant"> Infant</label>
+                  <button @click="customers.splice(i,1)" class="text-red-400 hover:text-red-600 text-sm">Șterge</button>
+                </div>
+              </div>
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                <select x-model="c.Category" class="border rounded px-2 py-1 text-sm">
+                  <option value="Mr">Mr</option><option value="Mrs">Mrs</option><option value="Ch">Ch</option>
+                </select>
+                <input x-model="c.Name" placeholder="Prenume" class="border rounded px-2 py-1 text-sm">
+                <input x-model="c.Surname" placeholder="Nume" class="border rounded px-2 py-1 text-sm">
+                <input x-model="c.Nationality" placeholder="Cetățenie" class="border rounded px-2 py-1 text-sm">
+                <input type="date" x-model="c.BirthDate" placeholder="Data nașterii" class="border rounded px-2 py-1 text-sm">
+                <input x-model="c.Idn" placeholder="IDNP/CNP" class="border rounded px-2 py-1 text-sm">
+                <input x-model="c.Telephone" placeholder="Telefon" class="border rounded px-2 py-1 text-sm">
+                <input x-model="c.Email" placeholder="Email" class="border rounded px-2 py-1 text-sm">
+                <input x-model="c.PassportNr" placeholder="Pașaport nr." class="border rounded px-2 py-1 text-sm">
+                <input type="date" x-model="c.PassportDateExpiry" placeholder="Pașaport expiră" class="border rounded px-2 py-1 text-sm">
+                <label class="text-xs flex items-center gap-1 col-span-2"><input type="checkbox" x-model="c.Visa"> Necesită viză</label>
+              </div>
+              <button @click="saveToDatabase(c, i)" class="mt-2 text-xs text-brand-600 hover:underline">💾 Salvează în baza de clienți</button>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <div class="p-5 border-t bg-slate-50 flex items-center justify-between flex-wrap gap-2">
+        <div class="text-sm text-slate-500" x-text="bookingError" :class="bookingError ? 'text-red-600 font-medium' : ''"></div>
+        <div class="flex gap-2">
+          <button @click="bookingOpen=false" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 rounded">Anulează</button>
+          <button @click="confirmBooking()" :disabled="bookingBusy" class="px-5 py-2 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded shadow-sm">
+            <span x-show="!bookingBusy">✅ Trimite rezervare</span>
+            <span x-show="bookingBusy">Se trimite...</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function searchApp() {
+  return {
+    tab: new URLSearchParams(location.search).get('type') || 'package',
+    tabs: [
+      {key:'package', icon:'🎁', label:'Pachet'},
+      {key:'hotel',   icon:'🏨', label:'Hotel'},
+      {key:'transport', icon:'✈️', label:'Transport'},
+      {key:'excursion', icon:'🚌', label:'Excursie'},
+      {key:'transfer', icon:'🚐', label:'Transfer'},
+    ],
+    countries: [], cities: [], terminals: [], packages: [], meals: [], categories: [], facilities: [],
+    excCountries: [], excDepartures: [], excPrograms: [], excursionList: [], hotelOptions: [],
+    markup: 0, results: null, error: null, busy: false, lastSearchTime: 0, page: 1,
+    savedSearches: [], showSaved: false,
+    form: {
+      pkg: { country_id:'', package_id:'', departure_terminal_id:'', adults:2, children_str:'', from_date: defaultDate(7), to_date: defaultDate(14), from_nights:7, to_nights:7, meal_ids:[], star_ids:[] },
+      hotel: { hotel_ids:[], from_date: defaultDate(7), to_date: defaultDate(8), from_nights:7, to_nights:7, adults:2, children_str:'', meal_ids:[] },
+      tr: { departure:'', destinations:[], from_date: defaultDate(7), to_date: defaultDate(14), days_from:7, days_to:7, adults:2, children_str:'', outbound:true, inbound:true, period_type:'departure_range' },
+      exc: { country_id:'', departure_id:'', excursion_ids:[], date_from: defaultDate(7), date_to: defaultDate(30), adults:2, children_str:'', trip_type:'excursion' },
+      tf: { departure_id:'', arrival_id:'', date: defaultDate(7), adults:2, transfer_type:'' },
+    },
+    bookingOpen: false, bookingSnapshot: {}, bookingType: '', bookingBusy: false, bookingError: '',
+    customers: [], customerSearchOpen: false, customerSearchQ: '', customerSearchResults: [],
+    hotelRoomsOpen: false, hotelRoomsLoading: false, hotelRoomsList: [], hotelRoomsTitle: '', hotelRoomsSubtitle: '',
+    hotelDetailsOpen: false, hotelDetailsLoading: false, hotelDetails: null, hotelPhotoIndex: 0,
+
+    async init() {
+      this.loadDirectories();
+      this.loadSavedSearches();
+    },
+    async loadDirectories() {
+      const [c, t, m, cats, fac] = await Promise.all([
+        api.get('/api/dir/countries').catch(()=>[]),
+        api.get('/api/dir/terminals').catch(()=>[]),
+        api.get('/api/dir/meals').catch(()=>[]),
+        api.get('/api/dir/hotel_categories').catch(()=>[]),
+        api.get('/api/dir/hotel_facilities').catch(()=>[]),
+      ]);
+      this.countries = Array.isArray(c) ? c : [];
+      this.terminals = Array.isArray(t) ? t : [];
+      this.meals = Array.isArray(m) ? m : [];
+      this.categories = Array.isArray(cats) ? cats : [];
+      this.facilities = Array.isArray(fac) ? fac : [];
+
+      // Auto-select country if only one (Zebra Tur has just Bulgaria contracted)
+      if (this.countries.length === 1 && !this.form.pkg.country_id) {
+        this.form.pkg.country_id = this.countries[0].id || this.countries[0].Id;
+        await this.onPkgCountryChange();  // will load packages + auto-set package + terminal
+      }
+      // Auto-select Chișinău code for transport tab (different format than package terminal)
+      if (!this.form.tr.departure) {
+        const kiv = this.terminals.find(x => (x.Code||'').toUpperCase() === 'KIV' || (x.Code||'').toUpperCase() === 'BKIV');
+        if (kiv) this.form.tr.departure = kiv.Code;
+      }
+
+      const [ec, ed] = await Promise.all([
+        api.get('/api/dir/excursion_countries').catch(()=>[]),
+        api.get('/api/dir/excursion_departures').catch(()=>[]),
+      ]);
+      this.excCountries = Array.isArray(ec) ? ec : [];
+      this.excDepartures = Array.isArray(ed) ? ed : [];
+    },
+    async loadHotelDirectory() {
+      this.hotelOptions = await api.get('/api/dir/hotels').catch(()=>[]);
+    },
+    async onPkgCountryChange() {
+      if (this.form.pkg.country_id) {
+        const list = await api.get('/api/dir/packages?country_id=' + this.form.pkg.country_id);
+        if (Array.isArray(list) && list.length) {
+          this.packages = list;
+          if (!this.form.pkg.package_id) {
+            // Prefer simplest (hotel-only) package by default to match SHS panel pricing
+            const hotelOnly = list.find(p => Array.isArray(p.content) && p.content.length === 1 && p.content[0] === 'hotel');
+            this.form.pkg.package_id = (hotelOnly || list[0]).id || (hotelOnly || list[0]).Id;
+          }
+          this.syncTerminalToPackage();
+        }
+      }
+    },
+    syncTerminalToPackage() {
+      const sel = this.selectedPackage();
+      // Hotel-only packages don't have real terminals — set 0
+      const hasTransport = (sel?.content || []).includes('transport');
+      if (!sel?.departure_terminals?.length || !hasTransport) {
+        this.form.pkg.departure_terminal_id = 0;
+        return;
+      }
+      const allowedIds = sel.departure_terminals.map(t => t.id);
+      if (!allowedIds.includes(Number(this.form.pkg.departure_terminal_id))) {
+        this.form.pkg.departure_terminal_id = sel.departure_terminals[0].id;
+      }
+    },
+    selectedPackage() {
+      return this.packages.find(p => (p.id||p.Id) == this.form.pkg.package_id);
+    },
+    get pkgTerminals() {
+      const sel = this.selectedPackage();
+      const hasTransport = (sel?.content || []).includes('transport');
+      if (!hasTransport) {
+        return [{ id: 0, name: '— fără transport (doar hotel) —' }];
+      }
+      if (sel?.departure_terminals?.length) return sel.departure_terminals;
+      return this.terminals.map(t => ({ id: t.Id, name: (t.CountryName||'') + ' — ' + t.Name }));
+    },
+    async loadExcursionList() {
+      const cid = this.form.exc.country_id;
+      if (!cid) return;
+      this.excursionList = await api.get('/api/excursions/list?countries=' + cid).catch(()=>[]);
+    },
+    setTab(k) { this.tab = k; const u = new URL(location); u.searchParams.set('type', k); history.replaceState({}, '', u); },
+    facilityLabel(id) {
+      const f = (this.facilities || []).find(x => x.id == id);
+      if (!f) return '#' + id;
+      return (f.translation && f.translation.ro) || f.name;
+    },
+    packageLabel(p) {
+      const content = p.content || [];
+      const icons = [];
+      if (content.includes('hotel')) icons.push('🏨');
+      if (content.includes('insurance')) icons.push('🛡️');
+      if (content.includes('transport')) icons.push('✈️');
+      if (content.includes('transfer')) icons.push('🚐');
+      return `${icons.join(' ')} ${p.name || p.Name}`;
+    },
+    packageContentHint() {
+      const p = this.selectedPackage();
+      if (!p?.content) return '';
+      const parts = [];
+      if (p.content.includes('hotel')) parts.push('cazare');
+      if (p.content.includes('insurance')) parts.push('asigurare');
+      if (p.content.includes('transport')) parts.push('transport (charter)');
+      if (p.content.includes('transfer')) parts.push('transfer');
+      return 'Include: ' + parts.join(' + ');
+    },
+    selectAllCities() {
+      const pkg = this.selectedPackage();
+      if (pkg?.city_ids?.length) {
+        toast(`Pachetul are ${pkg.city_ids.length} orașe disponibile — sunt incluse automat la căutare.`);
+      }
+    },
+    parseChildren(str) {
+      return (str||'').split(/[,;\s]+/).map(x => parseInt(x.trim())).filter(n => !isNaN(n) && n >= 0 && n < 18);
+    },
+    get resultsLabel() {
+      if (!this.results) return '';
+      if (this.tab==='package') return (this.results.prices?.length||0) + ' opțiuni';
+      if (this.tab==='hotel') return (this.results.hotels?.length||0) + ' hoteluri';
+      if (this.tab==='excursion') return (this.results.data?.length||0) + ' excursii';
+      return ((this.results.items?.length)||0) + ' rezultate';
+    },
+    async runSearch(keepPage=false) {
+      this.busy = true; this.error = null;
+      if (!keepPage) this.page = 1;
+      const t0 = performance.now();
+      try {
+        let url, body;
+        const f = this.form;
+        if (this.tab==='package') {
+          url = '/api/search/packages';
+          body = { ...f.pkg, children: this.parseChildren(f.pkg.children_str), markup_percent: this.markup };
+          // If no city_ids specified, use all cities from the selected package (required by SHS)
+          if (!body.city_ids || !body.city_ids.length) {
+            const pkg = this.selectedPackage();
+            if (pkg?.city_ids?.length) body.city_ids = pkg.city_ids;
+          }
+        } else if (this.tab==='hotel') {
+          url = '/api/search/hotels';
+          body = { ...f.hotel, children: this.parseChildren(f.hotel.children_str), markup_percent: this.markup };
+        } else if (this.tab==='transport') {
+          url = '/api/search/transport';
+          body = { ...f.tr, children: this.parseChildren(f.tr.children_str) };
+        } else if (this.tab==='excursion') {
+          url = '/api/search/excursions';
+          body = { ...f.exc, children_ages: this.parseChildren(f.exc.children_str) };
+          if (Array.isArray(body.excursion_ids) && !body.excursion_ids.length) delete body.excursion_ids;
+        } else {
+          url = '/api/search/transfers';
+          body = { ...f.tf };
+        }
+        const data = await api.post(url, body);
+        if (data?.error) throw new Error(data.error);
+        this.results = data;
+      } catch (e) {
+        this.error = e.message || 'Eroare la căutare';
+      } finally {
+        this.busy = false;
+        this.lastSearchTime = Math.round(performance.now() - t0);
+      }
+    },
+    openBooking(snapshot, type) {
+      this.bookingType = type;
+      const sale = snapshot.sale_amount || snapshot.sale_price || (snapshot.gross_amount * (1 + this.markup/100)) || snapshot.price;
+      this.bookingSnapshot = {
+        ...snapshot,
+        sale_amount: sale,
+        label: this.bookingLabel(snapshot, type),
+      };
+      this.customers = [];
+      const need = (this.form.pkg.adults || this.form.hotel.adults || this.form.tr.adults || this.form.exc.adults || 2);
+      for (let i=0; i<need; i++) this.addCustomerRow();
+      this.bookingOpen = true;
+      this.bookingError = '';
+    },
+    bookingLabel(s, type) {
+      if (type==='package') return `${s.hotel_name} · ${s.meal} · ${s.nights}n · ${s.departure_date}`;
+      if (type==='hotel') return `${s.hotel_name} · ${s.room_type} · ${s.meal} · ${s.check_in}→${s.check_out}`;
+      if (type==='transport') return `${s.departure_terminal} → ${s.arrival_terminal} · ${s.departure_date}`;
+      if (type==='excursion') return `${s.name || 'Excursie'} · ${s.date_start} → ${s.date_end}`;
+      return type;
+    },
+    addCustomerRow() {
+      this.customers.push({
+        Category:'Mr', Name:'', Surname:'', BirthDate:'', Age:0,
+        Nationality:'MOLDOVA', Idn:'', Telephone:'', Email:'',
+        Visa:false, PassportNr:'', PassportDateExpiry:'', Infant:false,
+      });
+    },
+    async searchCustomers() {
+      if (!this.customerSearchQ) { this.customerSearchResults = []; return; }
+      const r = await api.get('/api/customers?q=' + encodeURIComponent(this.customerSearchQ));
+      this.customerSearchResults = r.items || [];
+    },
+    useCustomer(c) {
+      this.customers.push({
+        Category: c.category || 'Mr', Name: c.name, Surname: c.surname,
+        BirthDate: c.birth_date || '', Age: 0, Nationality: c.nationality || 'MOLDOVA',
+        Idn: c.idn || '', Telephone: c.telephone || '', Email: c.email || '',
+        Visa: false, PassportNr: c.passport_nr || '', PassportDateExpiry: c.passport_expiry || '', Infant: false,
+      });
+      this.customerSearchOpen = false;
+    },
+    async saveToDatabase(c, i) {
+      try {
+        await api.post('/api/customers', {
+          category: c.Category, name: c.Name, surname: c.Surname,
+          birth_date: c.BirthDate, nationality: c.Nationality, idn: c.Idn,
+          telephone: c.Telephone, email: c.Email,
+          passport_nr: c.PassportNr, passport_expiry: c.PassportDateExpiry,
+        });
+        toast(`Pasager #${i+1} salvat în baza de clienți.`);
+      } catch (e) { toast('Eroare la salvare: ' + e.message, 'error'); }
+    },
+    async confirmBooking() {
+      this.bookingBusy = true; this.bookingError = '';
+      try {
+        if (!this.customers.length) throw new Error('Adaugă cel puțin un pasager');
+        for (const c of this.customers) if (!c.Name || !c.Surname) throw new Error('Toți pasagerii trebuie să aibă Nume și Prenume');
+        const body = {
+          session: this.bookingSnapshot.session,
+          price_id: this.bookingSnapshot.price_id,
+          customers: this.customers,
+          markup_percent: this.markup,
+          snapshot: this.bookingSnapshot,
+        };
+        const endpoint = (this.bookingType==='transport') ? '/api/book/transport' : '/api/book/package';
+        const r = await api.post(endpoint, body);
+        if (r?.error) throw new Error(r.error);
+        if (r.status !== 'ok') throw new Error(r.error || 'Rezervarea a eșuat');
+        toast('✅ Rezervare creată: #' + r.order, 'success');
+        this.bookingOpen = false;
+        setTimeout(() => location.href = '/orders', 800);
+      } catch (e) {
+        this.bookingError = e.message;
+      } finally {
+        this.bookingBusy = false;
+      }
+    },
+    async saveCurrentSearch() {
+      const name = prompt('Nume pentru această căutare:');
+      if (!name) return;
+      const params = this.form[ {package:'pkg', hotel:'hotel', transport:'tr', excursion:'exc', transfer:'tf'}[this.tab] ];
+      await api.post('/api/saved-searches', { name, kind: this.tab, params });
+      toast('Căutare salvată: ' + name);
+      this.loadSavedSearches();
+    },
+    async loadSavedSearches() {
+      const r = await api.get('/api/saved-searches');
+      this.savedSearches = r.items || [];
+    },
+    restoreSearch(s) {
+      const map = { package:'pkg', hotel:'hotel', transport:'tr', excursion:'exc', transfer:'tf' };
+      this.tab = s.kind;
+      Object.assign(this.form[map[s.kind]], s.params);
+      toast('Restaurat: ' + s.name);
+    },
+    async deleteSaved(id) {
+      await api.del('/api/saved-searches/' + id);
+      this.loadSavedSearches();
+    },
+    async openHotelDetails(p) {
+      this.hotelDetailsOpen = true;
+      this.hotelDetailsLoading = true;
+      this.hotelDetails = null;
+      this.hotelPhotoIndex = 0;
+      try {
+        const f = this.form.pkg;
+        const r = await api.post('/api/hotel/details', {
+          hotel_id: p.hotel_id,
+          from_date: f.from_date,
+          to_date: f.to_date,
+          from_nights: f.from_nights,
+          to_nights: f.to_nights,
+          adults: f.adults,
+          children: this.parseChildren(f.children_str),
+        });
+        if (r?.error) throw new Error(r.error);
+        this.hotelDetails = r;
+      } catch (e) {
+        toast('Eroare: ' + e.message, 'error');
+        this.hotelDetailsOpen = false;
+      } finally {
+        this.hotelDetailsLoading = false;
+      }
+    },
+    nextPhoto() { if (this.hotelDetails?.photos?.length) this.hotelPhotoIndex = (this.hotelPhotoIndex + 1) % this.hotelDetails.photos.length; },
+    prevPhoto() { if (this.hotelDetails?.photos?.length) this.hotelPhotoIndex = (this.hotelPhotoIndex - 1 + this.hotelDetails.photos.length) % this.hotelDetails.photos.length; },
+    async loadHotelRooms(p) {
+      this.hotelRoomsOpen = true;
+      this.hotelRoomsLoading = true;
+      this.hotelRoomsList = [];
+      this.hotelRoomsTitle = `${p.hotel_name} (${p.city || ''})`;
+      this.hotelRoomsSubtitle = 'Toate camerele și mesele disponibile pentru aceeași perioadă';
+      try {
+        const f = this.form.pkg;
+        const body = {
+          country_id: f.country_id,
+          package_id: f.package_id,
+          departure_terminal_id: f.departure_terminal_id,
+          hotel_id: p.hotel_id,
+          from_date: f.from_date,
+          to_date: f.to_date,
+          from_nights: f.from_nights,
+          to_nights: f.to_nights,
+          adults: f.adults,
+          children: this.parseChildren(f.children_str),
+          markup_percent: this.markup,
+        };
+        const r = await api.post('/api/search/packages/hotel_rooms', body);
+        if (r?.error) throw new Error(r.error);
+        this.hotelRoomsList = r.prices || [];
+      } catch (e) {
+        toast('Eroare: ' + e.message, 'error');
+      } finally {
+        this.hotelRoomsLoading = false;
+      }
+    },
+    async quoteOption(snapshot, type) {
+      const name = prompt('Numele clientului pentru această ofertă:');
+      if (!name) return;
+      await api.post('/api/quotes', {
+        customer_main: name, title: 'Ofertă: ' + (snapshot.hotel_name || snapshot.name || type),
+        summary: this.bookingLabel(snapshot, type),
+        options: [snapshot],
+        sale_amount: snapshot.sale_amount || snapshot.sale_price || snapshot.gross_amount,
+        currency: snapshot.currency || 'EUR',
+      });
+      toast('Adăugat în oferte pentru ' + name, 'success');
+    },
+    formatMoney,
+  }
+}
+function defaultDate(addDays) {
+  const d = new Date();
+  d.setDate(d.getDate() + (addDays || 0));
+  return d.toISOString().slice(0,10);
+}
+</script>
+{% endblock %}

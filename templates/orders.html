@@ -1,0 +1,226 @@
+{% extends "_layout.html" %}
+{% block title %}Comenzi · {{ agency }}{% endblock %}
+{% block content %}
+<div x-data="ordersApp()" x-init="init()" class="space-y-4">
+
+  <div class="bg-white rounded-2xl shadow-sm border p-4 md:p-5">
+    <div class="flex flex-wrap items-center gap-2">
+      <h1 class="text-xl font-bold flex-1">Comenzi</h1>
+      <button @click="syncAll()" class="bg-brand-600 hover:bg-brand-700 text-white px-3 py-1.5 rounded text-sm font-medium" :disabled="syncing">
+        <span x-show="!syncing">🔄 Sincronizează statusuri</span>
+        <span x-show="syncing">Sincronizare...</span>
+      </button>
+      <button @click="lookupOrders()" class="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded text-sm font-medium">➕ Adaugă comandă după ID SHS</button>
+      <button @click="importReport()" class="bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded text-sm">📥 Importă raport XML</button>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-5 gap-2 mt-4">
+      <input x-model="filters.q" @input.debounce.300ms="load()" placeholder="🔎 caută nr, client, hotel, destinație..." class="border rounded px-2 py-1.5 md:col-span-2">
+      <select x-model="filters.status" @change="load()" class="border rounded px-2 py-1.5">
+        <option value="">— toate statusurile —</option>
+        <option value="in_work">În lucru</option>
+        <option value="confirmed">Confirmat</option>
+        <option value="confirmed_print">Confirmat (tipărit)</option>
+        <option value="not_confirmed">Neconfirmat</option>
+        <option value="canceled">Anulat</option>
+        <option value="accepted_for_processing">Acceptat pt. procesare</option>
+      </select>
+      <input type="date" x-model="filters.from" @change="load()" class="border rounded px-2 py-1.5" placeholder="de la">
+      <input type="date" x-model="filters.to" @change="load()" class="border rounded px-2 py-1.5" placeholder="până la">
+    </div>
+  </div>
+
+  <div class="bg-white rounded-2xl shadow-sm border overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50 text-xs text-slate-600 uppercase">
+        <tr>
+          <th class="text-left p-3">#SHS</th>
+          <th class="text-left">Client</th>
+          <th class="text-left">Hotel / Destinație</th>
+          <th class="text-left">Plecare</th>
+          <th class="text-center">Pax</th>
+          <th class="text-right">Sumă</th>
+          <th class="text-center">Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <template x-for="o in items" :key="o.id">
+          <tr class="border-t hover:bg-slate-50 cursor-pointer" @click="openOrder(o.id)">
+            <td class="p-3 font-mono text-xs" x-text="o.shs_order_id || ('#' + o.id)"></td>
+            <td>
+              <div class="font-medium" x-text="o.customer_main || '—'"></div>
+              <div class="text-xs text-slate-500" x-text="o.customer_phone || ''"></div>
+            </td>
+            <td>
+              <div class="font-medium" x-text="o.hotel_name || o.destination || '—'"></div>
+              <div class="text-xs text-slate-500" x-text="o.meal && o.room_type ? (o.meal + ' · ' + o.room_type) : ''"></div>
+            </td>
+            <td>
+              <div x-text="o.departure_date || '—'"></div>
+              <div class="text-xs text-slate-500" x-text="o.return_date ? '→ ' + o.return_date : (o.nights ? o.nights+' nopți' : '')"></div>
+            </td>
+            <td class="text-center" x-text="o.pax_count || '—'"></td>
+            <td class="text-right font-semibold" x-text="formatMoney(o.sale_amount, o.currency)"></td>
+            <td class="text-center"><span class="px-2 py-0.5 text-xs rounded-full" :class="statusClass(o.status)" x-text="statusLabel(o.status)"></span></td>
+            <td class="text-right pr-3">
+              <button @click.stop="openOrder(o.id)" class="text-brand-600 hover:underline text-xs">Detalii →</button>
+            </td>
+          </tr>
+        </template>
+        <tr x-show="!items.length">
+          <td colspan="8" class="p-8 text-center text-slate-400">
+            Nu există comenzi care să corespundă filtrelor.
+            <div class="mt-2 text-xs">Apasă <b>Sincronizează</b> sau <b>Importă raport XML</b> pentru a aduce date din SHS.</div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="p-3 text-sm text-slate-500 border-t" x-text="items.length + ' comenzi afișate'"></div>
+  </div>
+
+  <!-- ORDER MODAL -->
+  <div x-show="selected" x-cloak class="fixed inset-0 bg-black/50 z-40 flex items-start justify-center p-4 overflow-y-auto">
+    <div @click.away="selected=null" class="bg-white rounded-2xl shadow-2xl max-w-3xl w-full my-8">
+      <div class="p-5 border-b flex justify-between items-start">
+        <div>
+          <div class="text-xs text-slate-500" x-text="'#' + selected?.order?.shs_order_id"></div>
+          <h3 class="font-bold text-xl" x-text="selected?.order?.customer_main || 'Comandă'"></h3>
+          <div class="text-sm text-slate-500" x-text="selected?.order?.hotel_name || ''"></div>
+        </div>
+        <button @click="selected=null" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">×</button>
+      </div>
+
+      <div class="p-5 space-y-4">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+          <div><div class="text-xs text-slate-500">Tip</div><div class="font-medium" x-text="selected?.order?.type"></div></div>
+          <div><div class="text-xs text-slate-500">Status</div><div><span class="px-2 py-0.5 text-xs rounded-full" :class="statusClass(selected?.order?.status)" x-text="statusLabel(selected?.order?.status)"></span></div></div>
+          <div><div class="text-xs text-slate-500">Plecare</div><div x-text="selected?.order?.departure_date"></div></div>
+          <div><div class="text-xs text-slate-500">Întoarcere</div><div x-text="selected?.order?.return_date"></div></div>
+          <div><div class="text-xs text-slate-500">Camera</div><div x-text="selected?.order?.room_type"></div></div>
+          <div><div class="text-xs text-slate-500">Masă</div><div x-text="selected?.order?.meal"></div></div>
+          <div><div class="text-xs text-slate-500">Nopți</div><div x-text="selected?.order?.nights"></div></div>
+          <div><div class="text-xs text-slate-500">Pax</div><div x-text="selected?.order?.pax_count"></div></div>
+          <div><div class="text-xs text-slate-500">Net</div><div x-text="formatMoney(selected?.order?.net_amount, selected?.order?.currency)"></div></div>
+          <div><div class="text-xs text-slate-500">Brut</div><div x-text="formatMoney(selected?.order?.gross_amount, selected?.order?.currency)"></div></div>
+          <div><div class="text-xs text-slate-500">Markup</div><div x-text="(selected?.order?.markup_percent || 0) + '%'"></div></div>
+          <div><div class="text-xs text-slate-500">Vânzare</div><div class="font-bold text-brand-700" x-text="formatMoney(selected?.order?.sale_amount, selected?.order?.currency)"></div></div>
+        </div>
+
+        <div class="border-t pt-3">
+          <h4 class="font-semibold mb-2">Schimbă status (sincronizare cu SHS)</h4>
+          <div class="flex flex-wrap gap-2">
+            <template x-for="s in statusOptions" :key="s.value">
+              <button @click="setStatus(s.value)" class="px-3 py-1 text-xs rounded-full border" :class="statusClass(s.value)" x-text="s.label"></button>
+            </template>
+          </div>
+        </div>
+
+        <div class="border-t pt-3">
+          <h4 class="font-semibold mb-2">Mesaje către SHS</h4>
+          <div class="space-y-2 max-h-40 overflow-y-auto">
+            <template x-for="m in selected?.messages || []" :key="m.id">
+              <div class="text-sm border-l-4 pl-2" :class="m.direction === 'out' ? 'border-brand-400' : 'border-slate-300'">
+                <div class="text-xs text-slate-500" x-text="(m.direction==='out'?'→ trimis':'← primit') + ' · ' + formatDate(m.created_at)"></div>
+                <div x-text="m.text"></div>
+              </div>
+            </template>
+          </div>
+          <div class="flex gap-2 mt-3">
+            <input x-model="newMessage" placeholder="Scrie un mesaj..." class="flex-1 border rounded px-2 py-1.5">
+            <button @click="sendMessage()" class="bg-brand-600 hover:bg-brand-700 text-white px-3 py-1.5 rounded">Trimite</button>
+          </div>
+        </div>
+
+        <div class="border-t pt-3" x-show="selected?.order?.payload">
+          <h4 class="font-semibold mb-2">Date complete (raw)</h4>
+          <pre class="text-xs bg-slate-50 p-2 rounded overflow-x-auto max-h-48" x-text="JSON.stringify(selected?.order?.payload, null, 2)"></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function ordersApp() {
+  return {
+    items: [], filters: { q:'', status:'', from:'', to:'' },
+    selected: null, syncing: false, newMessage: '',
+    statusOptions: [
+      {value:'in_work', label:'În lucru'},
+      {value:'confirmed', label:'Confirmat'},
+      {value:'confirmed_print', label:'Confirmat (tipărit)'},
+      {value:'not_confirmed', label:'Neconfirmat'},
+      {value:'accepted_for_processing', label:'Acceptat pt. procesare'},
+      {value:'canceled', label:'Anulat'},
+    ],
+    async init() { await this.load(); },
+    async load() {
+      const p = new URLSearchParams();
+      Object.entries(this.filters).forEach(([k,v]) => v && p.set(k, v));
+      const r = await api.get('/api/orders?' + p.toString());
+      this.items = r.items || [];
+    },
+    async lookupOrders() {
+      const raw = prompt('Introdu unul sau mai multe ID-uri SHS (separate prin virgulă):');
+      if (!raw) return;
+      const ids = raw.split(/[,;\s]+/).map(x => x.trim()).filter(Boolean);
+      if (!ids.length) return;
+      try {
+        const r = await api.post('/api/orders/lookup', { ids });
+        toast(`Adăugate: ${(r.saved||[]).length} comenzi`, 'success');
+        await this.load();
+      } catch (e) { toast('Eroare: ' + e.message, 'error'); }
+    },
+    async syncAll() {
+      this.syncing = true;
+      try {
+        const r = await api.post('/api/orders/sync', {});
+        toast('Sincronizat: ' + r.updated + ' comenzi', 'success');
+        await this.load();
+      } catch (e) { toast('Eroare: ' + e.message, 'error'); }
+      finally { this.syncing = false; }
+    },
+    async importReport() {
+      const from = prompt('De la (YYYY-MM-DD):', this.filters.from || new Date(Date.now()-30*86400000).toISOString().slice(0,10));
+      if (!from) return;
+      const to = prompt('Până la (YYYY-MM-DD):', this.filters.to || new Date().toISOString().slice(0,10));
+      if (!to) return;
+      try {
+        const r = await api.post('/api/orders/report/import', { from, to, status: 'all' });
+        toast('Importat: ' + r.imported + ' comenzi', 'success');
+        await this.load();
+      } catch (e) { toast('Eroare: ' + e.message, 'error'); }
+    },
+    async openOrder(id) {
+      this.selected = await api.get('/api/orders/' + id);
+    },
+    async setStatus(status) {
+      const id = this.selected?.order?.shs_order_id;
+      if (!id) return;
+      try {
+        await api.post('/api/orders/' + id + '/status', { status });
+        toast('Status schimbat: ' + statusLabel(status), 'success');
+        await this.openOrder(this.selected.order.id);
+        await this.load();
+      } catch (e) { toast('Eroare: ' + e.message, 'error'); }
+    },
+    async sendMessage() {
+      const text = (this.newMessage || '').trim();
+      if (!text) return;
+      const id = this.selected?.order?.shs_order_id;
+      try {
+        await api.post('/api/orders/' + id + '/message', { text });
+        this.newMessage = '';
+        toast('Mesaj trimis', 'success');
+        await this.openOrder(this.selected.order.id);
+      } catch (e) { toast('Eroare: ' + e.message, 'error'); }
+    },
+    statusLabel(s) { return statusLabel(s); },
+    statusClass(s) { return statusClassFn(s); },
+    formatMoney, formatDate,
+  }
+}
+</script>
+{% endblock %}

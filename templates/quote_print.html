@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<title>Ofertă · {{ quote.title }}</title>
+<style>
+  body { font-family: 'Inter', -apple-system, sans-serif; max-width: 800px; margin: 32px auto; padding: 0 24px; color: #0b1020; }
+  .header { display:flex; justify-content:space-between; align-items:center; border-bottom:3px solid #3a48d0; padding-bottom:12px; margin-bottom:20px; }
+  .agency { font-size:24px; font-weight:800; color:#2f38aa; }
+  .meta { color:#64748b; font-size:13px; }
+  h1 { font-size:22px; margin: 12px 0 4px; }
+  .client { background:#f5f7ff; padding:12px 16px; border-radius:8px; margin:16px 0; font-size:14px; }
+  .summary { margin:16px 0; line-height: 1.55; }
+  .total { background:linear-gradient(90deg,#3a48d0,#2f38aa); color:white; padding:18px 22px; border-radius:10px; display:flex; justify-content:space-between; align-items:center; margin-top:20px; }
+  .total .label { text-transform:uppercase; font-size:12px; opacity:0.85; }
+  .total .value { font-size:28px; font-weight:800; }
+  .options { border:1px solid #e2e8f0; border-radius:8px; padding:12px; margin-top:14px; }
+  .options pre { font-size:11px; color:#475569; white-space:pre-wrap; }
+  footer { text-align:center; color:#94a3b8; font-size:12px; margin-top:36px; border-top:1px solid #e2e8f0; padding-top:12px; }
+  @media print { .noprint { display:none; } }
+  .btn { background:#3a48d0; color:white; padding:8px 16px; border-radius:6px; text-decoration:none; }
+</style>
+</head>
+<body>
+  <div class="noprint" style="text-align:right; margin-bottom:8px;">
+    <a class="btn" href="javascript:window.print()">🖨️ Tipărește / Salvează ca PDF</a>
+  </div>
+
+  <div class="header">
+    <div>
+      <div class="agency">🦓 {{ agency }}</div>
+      <div class="meta">Tour Operator · Republica Moldova</div>
+    </div>
+    <div class="meta">
+      Ofertă #{{ quote.id }}<br>
+      {{ today }}
+    </div>
+  </div>
+
+  <h1>{{ quote.title }}</h1>
+
+  <div class="client">
+    <strong>Client:</strong> {{ quote.customer_main or '—' }}<br>
+    {% if quote.customer_phone %}<strong>Telefon:</strong> {{ quote.customer_phone }}{% endif %}
+  </div>
+
+  <div class="summary">
+    {{ quote.summary|e|replace('\n', '<br>')|safe if quote.summary else '<em>Fără descriere</em>' }}
+  </div>
+
+  {% if quote.options %}
+    <div class="options">
+      <div class="meta">Detalii tehnice:</div>
+      <pre>{{ quote.options|tojson(indent=2) }}</pre>
+    </div>
+  {% endif %}
+
+  <div class="total">
+    <div>
+      <div class="label">Sumă totală</div>
+      <div class="meta" style="opacity:0.8">incl. servicii</div>
+    </div>
+    <div class="value">{{ '%.2f'|format(quote.sale_amount or 0) }} {{ quote.currency or 'EUR' }}</div>
+  </div>
+
+  <footer>
+    {{ agency }} · Această ofertă este valabilă 48 ore de la emitere · Preț confirmabil la momentul rezervării
+  </footer>
+</body>
+</html>

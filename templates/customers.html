@@ -1,0 +1,113 @@
+{% extends "_layout.html" %}
+{% block title %}Clienți · {{ agency }}{% endblock %}
+{% block content %}
+<div x-data="customersApp()" x-init="init()" class="space-y-4">
+
+  <div class="bg-white rounded-2xl shadow-sm border p-4 md:p-5 flex items-center gap-3">
+    <h1 class="text-xl font-bold flex-1">Clienți</h1>
+    <input x-model="q" @input.debounce.300ms="load()" placeholder="🔎 caută..." class="border rounded px-2 py-1.5">
+    <button @click="openEdit({})" class="bg-brand-600 hover:bg-brand-700 text-white px-3 py-1.5 rounded text-sm font-medium">+ Client nou</button>
+  </div>
+
+  <div class="bg-white rounded-2xl shadow-sm border overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50 text-xs text-slate-600 uppercase">
+        <tr>
+          <th class="text-left p-3">Nume</th>
+          <th class="text-left">Cetățenie</th>
+          <th class="text-left">Telefon</th>
+          <th class="text-left">Email</th>
+          <th class="text-left">Pașaport</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <template x-for="c in items" :key="c.id">
+          <tr class="border-t hover:bg-slate-50 cursor-pointer" @click="openEdit(c)">
+            <td class="p-3">
+              <div class="font-medium" x-text="c.surname + ' ' + c.name"></div>
+              <div class="text-xs text-slate-500" x-text="c.category + ' · ' + (c.birth_date || '—')"></div>
+            </td>
+            <td x-text="c.nationality"></td>
+            <td x-text="c.telephone || '—'"></td>
+            <td x-text="c.email || '—'"></td>
+            <td>
+              <div x-text="c.passport_nr || '—'"></div>
+              <div class="text-xs text-slate-500" x-text="c.passport_expiry ? 'exp ' + c.passport_expiry : ''"></div>
+            </td>
+            <td class="text-right pr-3">
+              <button @click.stop="del(c.id)" class="text-red-400 hover:text-red-600 text-xs">Șterge</button>
+            </td>
+          </tr>
+        </template>
+        <tr x-show="!items.length">
+          <td colspan="6" class="p-8 text-center text-slate-400">Niciun client. Începe cu „+ Client nou".</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div x-show="editing" x-cloak class="fixed inset-0 bg-black/50 z-40 flex items-center justify-center p-4">
+    <div @click.away="editing=null" class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full">
+      <div class="p-5 border-b flex justify-between">
+        <h3 class="font-bold text-lg" x-text="editing?.id ? 'Editează client' : 'Client nou'"></h3>
+        <button @click="editing=null" class="text-2xl leading-none text-slate-400">×</button>
+      </div>
+      <div class="p-5 grid grid-cols-1 md:grid-cols-2 gap-3">
+        <select x-model="editing.category" class="border rounded px-2 py-1.5">
+          <option value="Mr">Mr</option><option value="Mrs">Mrs</option><option value="Ch">Copil</option>
+        </select>
+        <input x-model="editing.nationality" placeholder="Cetățenie" class="border rounded px-2 py-1.5">
+        <input x-model="editing.name" placeholder="Prenume *" class="border rounded px-2 py-1.5">
+        <input x-model="editing.surname" placeholder="Nume *" class="border rounded px-2 py-1.5">
+        <input type="date" x-model="editing.birth_date" placeholder="Data nașterii" class="border rounded px-2 py-1.5">
+        <input x-model="editing.idn" placeholder="IDNP/CNP" class="border rounded px-2 py-1.5">
+        <input x-model="editing.telephone" placeholder="Telefon" class="border rounded px-2 py-1.5">
+        <input x-model="editing.email" placeholder="Email" class="border rounded px-2 py-1.5">
+        <input x-model="editing.passport_nr" placeholder="Pașaport nr." class="border rounded px-2 py-1.5">
+        <input type="date" x-model="editing.passport_expiry" placeholder="Pașaport expiră" class="border rounded px-2 py-1.5">
+        <textarea x-model="editing.notes" placeholder="Note interne" class="border rounded px-2 py-1.5 md:col-span-2 h-20"></textarea>
+      </div>
+      <div class="p-5 border-t bg-slate-50 flex justify-end gap-2">
+        <button @click="editing=null" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 rounded">Anulează</button>
+        <button @click="save()" class="px-5 py-2 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded">Salvează</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function customersApp() {
+  return {
+    items: [], q: '', editing: null,
+    async init() {
+      await this.load();
+      if (new URL(location).searchParams.get('new')) this.openEdit({});
+    },
+    async load() {
+      const r = await api.get('/api/customers?q=' + encodeURIComponent(this.q || ''));
+      this.items = r.items || [];
+    },
+    openEdit(c) {
+      this.editing = { category:'Mr', name:'', surname:'', nationality:'MOLDOVA', ...c };
+    },
+    async save() {
+      const c = this.editing;
+      if (!c.name || !c.surname) { toast('Numele și prenumele sunt obligatorii', 'error'); return; }
+      try {
+        if (c.id) await api.put('/api/customers/' + c.id, c);
+        else await api.post('/api/customers', c);
+        this.editing = null;
+        toast('Salvat', 'success');
+        await this.load();
+      } catch (e) { toast(e.message, 'error'); }
+    },
+    async del(id) {
+      if (!confirm('Sigur ștergi acest client?')) return;
+      await api.del('/api/customers/' + id);
+      await this.load();
+    },
+  }
+}
+</script>
+{% endblock %}

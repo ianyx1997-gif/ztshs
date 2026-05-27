@@ -1,0 +1,1125 @@
+<!doctype html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ agency }} · Caută vacanța ta perfectă</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  body { font-family: 'Inter', system-ui, sans-serif; }
+  [x-cloak] { display: none !important; }
+  .hero-bg {
+    background-image:
+      linear-gradient(rgba(13, 16, 42, 0.55), rgba(13, 16, 42, 0.7)),
+      url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=2000&q=80');
+    background-size: cover;
+    background-position: center;
+  }
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+  .hotel-card:hover .hotel-photo { transform: scale(1.05); }
+  .hotel-photo { transition: transform 0.4s; }
+  @keyframes slide-up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+  .animate-slide-up { animation: slide-up 0.4s ease-out; }
+  details > summary { list-style: none; cursor: pointer; }
+  details > summary::-webkit-details-marker { display: none; }
+</style>
+</head>
+<body class="bg-slate-50 text-slate-900 {% if embed %}embed-mode{% endif %}" x-data="turistApp()" x-init="init()">
+{% if embed %}
+<style>
+  .embed-mode header, .embed-mode footer { display: none !important; }
+  .embed-mode .hero-bg { background-image: linear-gradient(rgba(13, 16, 42, 0.45), rgba(13, 16, 42, 0.55)), url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=2000&q=80'); }
+  .embed-mode main { padding-top: 0; }
+</style>
+<script>
+  // Notify parent of content height for iframe auto-resize
+  (function() {
+    function sendHeight() {
+      var h = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);
+      try { parent.postMessage({ type: 'zebra-tur:height', height: h }, '*'); } catch (e) {}
+    }
+    window.addEventListener('load', sendHeight);
+    window.addEventListener('resize', sendHeight);
+    var ro = new ResizeObserver(sendHeight);
+    document.addEventListener('DOMContentLoaded', function() { ro.observe(document.body); });
+    setInterval(sendHeight, 1500);
+  })();
+</script>
+{% endif %}
+
+<!-- HEADER -->
+<header class="bg-white shadow-sm sticky top-0 z-30">
+  <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+    <a href="/turist" class="flex items-center gap-2">
+      <span class="text-3xl">🦓</span>
+      <div>
+        <div class="font-extrabold text-xl text-slate-900">Zebra Tur</div>
+        <div class="text-xs text-slate-500 -mt-0.5">Vacanțe în Bulgaria · Plecare din Chișinău</div>
+      </div>
+    </a>
+    <div class="hidden md:flex items-center gap-4 text-sm">
+      <a href="tel:+37378326222" class="text-slate-600 hover:text-brand-600 font-medium">📞 +37378326222</a>
+      <a href="mailto:info@zebratur.md" class="text-slate-600 hover:text-brand-600 font-medium">✉️ info@zebratur.md</a>
+    </div>
+  </div>
+</header>
+
+<!-- HERO + SEARCH FORM -->
+<section class="hero-bg text-white">
+  <div class="max-w-7xl mx-auto px-4 py-10 md:py-16">
+    <h1 class="text-3xl md:text-5xl font-extrabold mb-3 text-center">Vacanța ta în Bulgaria începe aici</h1>
+    <p class="text-center text-lg text-white/80 mb-8">Plajă, soare și hoteluri de top — la cele mai bune prețuri</p>
+
+    <!-- SEARCH BOX -->
+    <div class="bg-white text-slate-900 rounded-3xl shadow-2xl p-5 md:p-7 max-w-6xl mx-auto">
+
+      <!-- TRIP TYPE TOGGLE (radio cards) -->
+      <div class="grid grid-cols-2 gap-3 mb-5">
+        <button @click="setTripType('bus')" type="button"
+          :class="filters.tripType === 'bus' ? 'border-brand-600 bg-brand-50 ring-2 ring-brand-200' : 'border-slate-200 hover:border-brand-300'"
+          class="border-2 rounded-2xl p-4 text-left transition flex items-start gap-3">
+          <div class="text-4xl">🚌</div>
+          <div class="flex-1">
+            <div class="font-bold text-base flex items-center gap-2">
+              Pachet cu autocar
+              <span x-show="filters.tripType === 'bus'" class="text-brand-600 text-lg">✓</span>
+            </div>
+            <div class="text-xs text-slate-500 mt-0.5">Transport Chișinău ⇄ Bulgaria + cazare + asigurare + transfer</div>
+          </div>
+        </button>
+        <button @click="setTripType('self')" type="button"
+          :class="filters.tripType === 'self' ? 'border-brand-600 bg-brand-50 ring-2 ring-brand-200' : 'border-slate-200 hover:border-brand-300'"
+          class="border-2 rounded-2xl p-4 text-left transition flex items-start gap-3">
+          <div class="text-4xl">🚗</div>
+          <div class="flex-1">
+            <div class="font-bold text-base flex items-center gap-2">
+              Doar cazare (cu mașina personală)
+              <span x-show="filters.tripType === 'self'" class="text-brand-600 text-lg">✓</span>
+            </div>
+            <div class="text-xs text-slate-500 mt-0.5">Doar hotelul — transportul îl asiguri tu</div>
+          </div>
+        </button>
+      </div>
+
+      <!-- ROW 1: Date range / Nights / Pax -->
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
+        <div class="md:col-span-6">
+          <label class="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">📅 Plecare în perioada</label>
+          <div class="flex items-center gap-2 mt-1.5">
+            <input type="date" x-model="filters.dateFrom" class="flex-1 border-2 border-slate-200 rounded-xl px-3 py-3 focus:border-brand-500 focus:outline-none text-sm font-medium">
+            <span class="text-slate-400 font-bold">→</span>
+            <input type="date" x-model="filters.dateTo" class="flex-1 border-2 border-slate-200 rounded-xl px-3 py-3 focus:border-brand-500 focus:outline-none text-sm font-medium">
+          </div>
+        </div>
+        <div class="md:col-span-3">
+          <label class="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">🌙 Nopți</label>
+          <select x-model.number="filters.nights" class="w-full mt-1.5 border-2 border-slate-200 rounded-xl px-3 py-3 focus:border-brand-500 focus:outline-none text-sm font-medium">
+            <option value="1">1 noapte</option>
+            <option value="2">2 nopți</option>
+            <option value="3">3 nopți</option>
+            <option value="4">4 nopți</option>
+            <option value="5">5 nopți</option>
+            <option value="6">6 nopți</option>
+            <option value="7">7 nopți</option>
+            <option value="8">8 nopți</option>
+            <option value="9">9 nopți</option>
+            <option value="10">10 nopți</option>
+            <option value="11">11 nopți</option>
+            <option value="12">12 nopți</option>
+            <option value="13">13 nopți</option>
+            <option value="14">14 nopți</option>
+          </select>
+        </div>
+        <div class="md:col-span-3 relative">
+          <label class="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">👥 Turiști</label>
+          <button @click="paxOpen=!paxOpen" type="button" class="w-full mt-1.5 border-2 border-slate-200 rounded-xl px-3 py-3 text-left focus:border-brand-500 focus:outline-none flex items-center justify-between text-sm font-medium">
+            <span x-text="paxLabel()"></span>
+            <span class="text-slate-400">▾</span>
+          </button>
+          <div x-show="paxOpen" @click.away="paxOpen=false" x-cloak class="absolute right-0 top-full mt-2 bg-white border-2 border-slate-200 rounded-xl shadow-2xl p-4 z-20 w-72">
+            <div class="flex justify-between items-center mb-3">
+              <div>
+                <div class="font-medium">Adulți</div>
+                <div class="text-xs text-slate-500">12+ ani</div>
+              </div>
+              <div class="flex items-center gap-2">
+                <button @click="filters.adults = Math.max(1, filters.adults-1)" class="w-9 h-9 rounded-full border-2 border-brand-500 text-brand-700 font-bold hover:bg-brand-50">−</button>
+                <span class="w-7 text-center font-bold text-lg" x-text="filters.adults"></span>
+                <button @click="filters.adults = Math.min(9, filters.adults+1)" class="w-9 h-9 rounded-full border-2 border-brand-500 text-brand-700 font-bold hover:bg-brand-50">+</button>
+              </div>
+            </div>
+            <div class="flex justify-between items-center mb-3">
+              <div>
+                <div class="font-medium">Copii</div>
+                <div class="text-xs text-slate-500">0-12 ani</div>
+              </div>
+              <div class="flex items-center gap-2">
+                <button @click="removeChild()" class="w-9 h-9 rounded-full border-2 border-brand-500 text-brand-700 font-bold hover:bg-brand-50">−</button>
+                <span class="w-7 text-center font-bold text-lg" x-text="filters.children.length"></span>
+                <button @click="addChild()" class="w-9 h-9 rounded-full border-2 border-brand-500 text-brand-700 font-bold hover:bg-brand-50">+</button>
+              </div>
+            </div>
+            <template x-for="(age, i) in filters.children" :key="i">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-sm" x-text="'Vârsta copilului ' + (i+1)"></span>
+                <select x-model.number="filters.children[i]" class="border rounded px-2 py-1 text-sm">
+                  <template x-for="a in [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17]" :key="a">
+                    <option :value="a" x-text="a + ' ani'"></option>
+                  </template>
+                </select>
+              </div>
+            </template>
+            <button @click="paxOpen=false" class="w-full mt-2 bg-brand-600 hover:bg-brand-700 text-white py-2 rounded-lg font-medium">Gata</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ROW 2: Always-visible chip filters (Masă, Stele, then Stațiune dropdown) -->
+      <div class="mt-5 pt-5 border-t border-slate-100 space-y-4">
+
+        <div>
+          <div class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1">
+            🍽️ Tip masă
+            <button x-show="filters.mealIds.length" @click="filters.mealIds=[]" class="text-xs text-brand-600 hover:underline font-normal ml-auto">șterge</button>
+          </div>
+          <div class="flex flex-wrap gap-1.5">
+            <template x-for="m in mealsShort" :key="m.id">
+              <button @click="toggleMeal(m.id)"
+                :class="filters.mealIds.includes(m.id) ? 'bg-brand-600 text-white border-brand-600 shadow' : 'bg-white border-slate-200 hover:border-brand-300'"
+                class="text-sm px-3 py-1.5 rounded-full border-2 font-medium transition" x-text="m.label" :title="m.full"></button>
+            </template>
+          </div>
+        </div>
+
+        <div>
+          <div class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1">
+            ⭐ Categorie hotel
+            <button x-show="filters.starIds.length" @click="filters.starIds=[]" class="text-xs text-brand-600 hover:underline font-normal ml-auto">șterge</button>
+          </div>
+          <div class="flex flex-wrap gap-1.5">
+            <template x-for="s in starsShort" :key="s.id">
+              <button @click="toggleStar(s.id)"
+                :class="filters.starIds.includes(s.id)
+                  ? (s.warning ? 'bg-rose-500 text-white border-rose-500 shadow' : 'bg-amber-500 text-white border-amber-500 shadow')
+                  : (s.warning ? 'bg-rose-50 text-rose-600 border-rose-300 hover:border-rose-400' : 'bg-white border-slate-200 hover:border-amber-300')"
+                class="text-sm px-3 py-1.5 rounded-full border-2 font-medium transition" x-text="s.label"
+                :title="s.warning ? 'Categorie inferioară — nu este preselectată' : ''"></button>
+            </template>
+          </div>
+        </div>
+
+        <div>
+          <div class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1">
+            📍 Stațiune
+            <button x-show="filters.cityId" @click="filters.cityId=''" class="text-xs text-brand-600 hover:underline font-normal ml-auto">șterge</button>
+          </div>
+          <select x-model="filters.cityId" class="w-full md:w-2/3 border-2 border-slate-200 rounded-xl px-3 py-2.5 focus:border-brand-500 focus:outline-none text-sm font-medium">
+            <option value="">Toate stațiunile din Bulgaria</option>
+            <template x-for="c in topCities" :key="c.id"><option :value="c.id" x-text="c.name"></option></template>
+          </select>
+        </div>
+
+        <div>
+          <div class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1">
+            ✨ Facilități
+            <button x-show="filters.facilityIds.length" @click="filters.facilityIds=[]" class="text-xs text-brand-600 hover:underline font-normal ml-auto">șterge</button>
+          </div>
+          <div class="flex flex-wrap gap-1.5">
+            <template x-for="f in topFacilities" :key="f.id">
+              <button @click="toggleFacility(f.id)"
+                :class="filters.facilityIds.includes(f.id) ? 'bg-emerald-600 text-white border-emerald-600 shadow' : 'bg-white border-slate-200 hover:border-emerald-300'"
+                class="text-sm px-3 py-1.5 rounded-full border-2 font-medium transition" x-text="f.label"></button>
+            </template>
+          </div>
+        </div>
+      </div>
+
+      <!-- ROW 3: Big search button + active filter summary -->
+      <div class="mt-5 flex flex-col md:flex-row gap-3 items-stretch md:items-center">
+        <div class="flex-1 text-xs text-slate-500" x-show="activeFiltersCount">
+          <span class="font-medium" x-text="activeFiltersCount + ' filtre active'"></span>
+          <button @click="resetFilters()" class="ml-2 text-brand-600 hover:underline">resetează tot</button>
+        </div>
+        <button @click="search()" :disabled="busy" class="md:w-auto bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white text-lg font-bold px-10 py-3.5 rounded-xl shadow-lg transition flex items-center justify-center gap-2 disabled:opacity-60">
+          <span x-show="!busy">🔍 Caută vacanța mea</span>
+          <span x-show="busy">Se caută cele mai bune oferte...</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TRUST BADGES -->
+<section class="bg-white py-6 border-b">
+  <div class="max-w-7xl mx-auto px-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+    <div class="flex flex-col items-center gap-1">
+      <div class="text-3xl">🏖️</div>
+      <div class="font-semibold text-sm">1000+ hoteluri</div>
+      <div class="text-xs text-slate-500">în toată Bulgaria</div>
+    </div>
+    <div class="flex flex-col items-center gap-1">
+      <div class="text-3xl">💰</div>
+      <div class="font-semibold text-sm">Garanția prețului</div>
+      <div class="text-xs text-slate-500">cele mai bune oferte</div>
+    </div>
+    <div class="flex flex-col items-center gap-1">
+      <div class="text-3xl">📞</div>
+      <div class="font-semibold text-sm">Suport 24/7</div>
+      <div class="text-xs text-slate-500">consultanță gratuită</div>
+    </div>
+    <div class="flex flex-col items-center gap-1">
+      <div class="text-3xl">✅</div>
+      <div class="font-semibold text-sm">Rezervare ușoară</div>
+      <div class="text-xs text-slate-500">confirmare în 2 ore</div>
+    </div>
+  </div>
+</section>
+
+<!-- RESULTS -->
+<section class="max-w-7xl mx-auto px-4 py-8">
+
+  <div x-show="!results && !busy" class="text-center py-16">
+    <div class="text-7xl mb-3">🌅</div>
+    <h2 class="text-2xl font-bold mb-2">Apasă „Caută vacanța mea" ca să vezi ofertele</h2>
+    <p class="text-slate-500">Sute de hoteluri din Bulgaria cu cele mai bune prețuri</p>
+  </div>
+
+  <div x-show="busy" class="text-center py-16">
+    <div class="inline-block animate-spin text-5xl mb-3">⏳</div>
+    <p class="text-slate-500">Căutăm cele mai bune oferte pentru tine...</p>
+  </div>
+
+  <div x-show="results && !busy">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-2xl font-bold">
+        <span x-text="(results?.prices?.length || 0)"></span>
+        <span x-text="(results?.prices?.length === 1 ? 'ofertă' : 'oferte') + ' găsite'"></span>
+      </h2>
+      <select x-model="sortBy" @change="sortResults()" class="border-2 border-slate-200 rounded-lg px-3 py-2 text-sm">
+        <option value="price_asc">💰 Preț crescător</option>
+        <option value="price_desc">💎 Preț descrescător</option>
+        <option value="star_desc">⭐ Cele mai multe stele</option>
+      </select>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+      <template x-for="(offer, idx) in sortedPrices" :key="offer.price_id">
+        <div class="hotel-card bg-white rounded-2xl shadow-md hover:shadow-2xl overflow-hidden transition group animate-slide-up" :style="`animation-delay: ${idx*50}ms`">
+          <a :href="offerUrl(offer)" class="block relative aspect-[4/3] overflow-hidden bg-slate-200 cursor-pointer">
+            <template x-if="offer.default_photo">
+              <img :src="offer.default_photo" class="hotel-photo w-full h-full object-cover" loading="lazy" onerror="this.style.display='none'">
+            </template>
+            <template x-if="!offer.default_photo">
+              <div class="w-full h-full flex items-center justify-center text-6xl">🏨</div>
+            </template>
+            <div class="absolute top-3 left-3 bg-white/95 backdrop-blur px-2 py-0.5 rounded-full text-sm font-bold text-amber-600" x-text="offer.star"></div>
+            <button @click.prevent.stop="toggleFavorite(offer)" class="absolute top-3 right-3 w-10 h-10 bg-white/95 backdrop-blur hover:bg-white rounded-full flex items-center justify-center shadow-lg transition hover:scale-110" :title="isFavorite(offer) ? 'Elimină din favorite' : 'Adaugă la favorite'">
+              <span class="text-2xl" x-text="isFavorite(offer) ? '❤️' : '🤍'"></span>
+            </button>
+            <div x-show="offer.active_discount_pct" class="absolute bottom-3 right-3 bg-red-500 text-white px-2 py-1 rounded-lg text-sm font-bold animate-pulse" x-text="'-' + offer.active_discount_pct + '%'"></div>
+            <div x-show="offer.spo" class="absolute bottom-3 left-3 bg-purple-600 text-white px-2 py-0.5 rounded text-xs font-bold">OFERTĂ SPECIALĂ</div>
+          </a>
+
+          <div class="p-4">
+            <div class="flex items-start justify-between gap-2 mb-1">
+              <a :href="offerUrl(offer)" class="font-bold text-lg leading-tight hover:text-brand-600" x-text="offer.hotel_name"></a>
+            </div>
+            <div class="text-sm text-slate-500 mb-3">
+              📍 <span x-text="offer.city || 'Bulgaria'"></span>
+            </div>
+
+            <div class="space-y-1 text-sm mb-4">
+              <div class="flex items-center gap-2">
+                <span>📅</span>
+                <span class="text-slate-700" x-text="formatDate(offer.check_in) + ' → ' + formatDate(offer.check_out)"></span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span>🌙</span>
+                <span class="text-slate-700" x-text="offer.nights + ' nopți'"></span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span>🍽️</span>
+                <span class="text-slate-700" x-text="mealHuman(offer.meal)"></span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span>🛏️</span>
+                <span class="text-slate-700" x-text="roomHuman(offer.room_type)"></span>
+              </div>
+            </div>
+
+            <div class="border-t pt-3">
+              <div class="flex items-end justify-between">
+                <div>
+                  <div class="text-xs text-slate-500" x-text="'pentru ' + paxLabel(true)"></div>
+                  <div class="text-3xl font-extrabold text-brand-700" x-text="formatMoney(offer.brut_zebra || offer.gross_amount)"></div>
+                </div>
+                <button @click="openReserve(offer)" class="bg-orange-500 hover:bg-orange-600 text-white font-semibold px-4 py-2 rounded-lg shadow-md transition whitespace-nowrap">
+                  Rezervare temporară →
+                </button>
+              </div>
+              <button @click="openRooms(offer)" class="mt-2 w-full text-sm font-medium text-brand-700 bg-brand-50 hover:bg-brand-100 border border-brand-200 hover:border-brand-300 py-2 rounded-lg transition flex items-center justify-center gap-1.5">
+                <span>📋 Vezi toate camerele și prețurile</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </template>
+    </div>
+
+    <div x-show="results && !results.prices?.length" class="text-center py-12">
+      <div class="text-6xl mb-3">🔍</div>
+      <h3 class="text-xl font-semibold mb-2">Nu am găsit oferte pentru aceste criterii</h3>
+      <p class="text-slate-500">Încearcă să modifici data sau să elimini unele filtre.</p>
+    </div>
+  </div>
+</section>
+
+<!-- FAVORITES FAB (fixed left) -->
+<button @click="favoritesOpen=!favoritesOpen" class="fixed left-5 bottom-5 z-40 w-16 h-16 bg-gradient-to-br from-pink-500 to-rose-600 hover:from-pink-600 hover:to-rose-700 text-white rounded-full shadow-2xl flex items-center justify-center transition hover:scale-110 group" :title="favorites.length + ' favorite'">
+  <span class="text-3xl">❤️</span>
+  <span x-show="favorites.length" class="absolute -top-1 -right-1 bg-white text-rose-600 font-extrabold text-xs rounded-full w-7 h-7 flex items-center justify-center border-2 border-rose-500" x-text="favorites.length"></span>
+</button>
+
+<!-- FAVORITES DRAWER -->
+<div x-show="favoritesOpen" x-cloak class="fixed inset-0 z-50">
+  <div @click="favoritesOpen=false" class="absolute inset-0 bg-black/60"></div>
+  <div class="absolute left-0 top-0 bottom-0 w-full max-w-2xl bg-white shadow-2xl overflow-y-auto" x-transition:enter="transition transform ease-out duration-300" x-transition:enter-start="-translate-x-full" x-transition:enter-end="translate-x-0">
+
+    <div class="p-5 border-b sticky top-0 bg-white z-10 flex justify-between items-center">
+      <div>
+        <h3 class="font-bold text-2xl flex items-center gap-2">❤️ Favoritele mele</h3>
+        <p class="text-sm text-slate-500" x-text="favorites.length + ' ' + (favorites.length === 1 ? 'tur salvat' : 'tururi salvate')"></p>
+      </div>
+      <button @click="favoritesOpen=false" class="text-slate-400 hover:text-slate-600 text-3xl leading-none">×</button>
+    </div>
+
+    <div x-show="favorites.length" class="p-3 border-b bg-slate-50 flex flex-wrap items-center gap-2">
+      <button @click="copyAllFavorites()" class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg font-medium text-sm flex items-center gap-1.5">
+        📋 Copiază toate favoritele
+      </button>
+      <button @click="shareFavorites()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-medium text-sm flex items-center gap-1.5">
+        💬 Trimite pe WhatsApp
+      </button>
+      <button @click="clearFavorites()" class="text-red-500 hover:bg-red-50 px-3 py-2 rounded-lg text-sm ml-auto">🗑️ Șterge toate</button>
+    </div>
+
+    <div x-show="!favorites.length" class="p-12 text-center">
+      <div class="text-7xl mb-3">🤍</div>
+      <h4 class="font-bold text-lg mb-1">Nu ai favorite încă</h4>
+      <p class="text-slate-500 text-sm">Apasă pe inima 🤍 de la orice tur ca să-l salvezi aici. Apoi poți copia toate datele cu un click.</p>
+    </div>
+
+    <div class="p-3 space-y-3">
+      <template x-for="(fav, idx) in favorites" :key="fav.price_id">
+        <div class="border-2 border-slate-100 rounded-xl p-3 flex gap-3 hover:border-pink-200 hover:bg-pink-50/30 transition">
+          <a :href="fav.url || ('/turist/hotel/' + fav.hotel_id)" class="w-24 h-24 flex-shrink-0 bg-slate-200 rounded-lg overflow-hidden block">
+            <template x-if="fav.default_photo">
+              <img :src="fav.default_photo" class="w-full h-full object-cover" loading="lazy" onerror="this.style.display='none'">
+            </template>
+            <template x-if="!fav.default_photo">
+              <div class="w-full h-full flex items-center justify-center text-3xl">🏨</div>
+            </template>
+          </a>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-start justify-between gap-2">
+              <div class="min-w-0">
+                <a :href="fav.url || ('/turist/hotel/' + fav.hotel_id)" class="font-bold truncate hover:text-brand-600 block" x-text="fav.hotel_name + ' ' + (fav.star || '')"></a>
+                <div class="text-xs text-slate-500" x-text="'📍 ' + (fav.city || '')"></div>
+              </div>
+              <button @click="toggleFavorite(fav)" class="text-rose-500 hover:bg-rose-50 rounded-full w-7 h-7 flex items-center justify-center flex-shrink-0" title="Elimină din favorite">×</button>
+            </div>
+            <div class="text-xs text-slate-600 mt-1">
+              <div x-text="'📅 ' + formatDate(fav.check_in) + ' → ' + formatDate(fav.check_out) + ' (' + fav.nights + 'n)'"></div>
+              <div x-text="'🍽️ ' + mealHuman(fav.meal) + ' · 🛏️ ' + roomHuman(fav.room_type)"></div>
+            </div>
+            <div class="flex items-center justify-between mt-2 flex-wrap gap-1">
+              <div class="text-lg font-extrabold text-brand-700" x-text="formatMoney(fav.brut_zebra || fav.gross_amount)"></div>
+              <div class="flex gap-1">
+                <button @click="copyLinkOnly(fav)" class="text-xs bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded font-medium" title="Copiază doar link-ul">🔗 Link</button>
+                <button @click="copyFavorite(fav)" class="text-xs bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded font-medium" title="Copiază detaliile + link">📋 Copiază</button>
+                <a :href="fav.url || ('/turist/hotel/' + fav.hotel_id)" class="text-xs bg-orange-500 hover:bg-orange-600 text-white px-3 py-1 rounded font-medium">Vezi →</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
+    </div>
+  </div>
+</div>
+
+<!-- ROOMS MODAL (matrix + list toggle) -->
+<div x-show="roomsOpen" x-cloak class="fixed inset-0 bg-black/70 z-50 flex items-start justify-center p-4 overflow-y-auto">
+  <div @click.away="roomsOpen=false" class="bg-white rounded-2xl shadow-2xl max-w-6xl w-full my-4">
+    <div class="p-5 border-b flex justify-between items-start sticky top-0 bg-white z-10 rounded-t-2xl">
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-2 flex-wrap">
+          <h3 class="font-bold text-2xl" x-text="currentOffer?.hotel_name"></h3>
+          <span class="text-amber-500 font-bold" x-text="currentOffer?.star"></span>
+        </div>
+        <div class="text-sm text-slate-500" x-text="'📍 ' + (currentOffer?.city || '') + ' · toate camerele și mesele disponibile'"></div>
+      </div>
+      <div class="bg-slate-100 rounded-lg p-0.5 flex mr-3">
+        <button @click="roomsViewMode='matrix'" :class="roomsViewMode==='matrix' ? 'bg-white shadow text-brand-700' : 'text-slate-600 hover:text-slate-900'" class="px-3 py-1 rounded-md text-sm font-medium transition">📊 Matrice</button>
+        <button @click="roomsViewMode='list'" :class="roomsViewMode==='list' ? 'bg-white shadow text-brand-700' : 'text-slate-600 hover:text-slate-900'" class="px-3 py-1 rounded-md text-sm font-medium transition">📋 Listă</button>
+      </div>
+      <button @click="roomsOpen=false" class="text-slate-400 hover:text-slate-600 text-3xl leading-none">×</button>
+    </div>
+
+    <div class="p-4">
+      <div x-show="roomsLoading" class="text-center py-12 text-slate-400">Se încarcă variantele...</div>
+      <div x-show="!roomsLoading && !roomsList.length" class="text-center py-12 text-slate-400">Nu sunt camere disponibile pentru această perioadă.</div>
+
+      <!-- MATRIX VIEW -->
+      <div x-show="roomsViewMode==='matrix' && roomsList.length" class="overflow-x-auto -mx-4 px-4">
+        <table class="w-full border-collapse text-sm">
+          <thead>
+            <tr>
+              <th class="sticky left-0 bg-white z-10 text-left py-2 px-3 border-b-2 border-slate-200 font-bold text-slate-700 min-w-[220px]">Cameră / Masă</th>
+              <template x-for="d in pivotedRoomsModal.dates" :key="d">
+                <th class="text-center py-2 px-2 border-b-2 border-slate-200 font-semibold text-slate-700 min-w-[90px]">
+                  <div class="text-xs text-slate-500" x-text="dateDayShort(d)"></div>
+                  <div x-text="formatDateShort(d)"></div>
+                </th>
+              </template>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="g in pivotedRoomsModal.groups" :key="g.key">
+              <tr class="hover:bg-slate-50">
+                <td class="sticky left-0 bg-white py-2 px-3 border-b border-slate-100 z-10">
+                  <span class="px-1.5 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] rounded font-bold whitespace-nowrap" x-text="mealHuman(g.meal)"></span>
+                  <div class="font-semibold text-sm mt-0.5" x-text="roomHuman(g.room_type)"></div>
+                  <div class="text-[11px] text-slate-500" x-text="g.placement"></div>
+                </td>
+                <template x-for="d in pivotedRoomsModal.dates" :key="g.key+d">
+                  <td class="border-b border-slate-100 p-1 text-center">
+                    <template x-if="g.prices[d]">
+                      <button @click="roomsOpen=false; openReserve(g.prices[d])" class="w-full bg-brand-50 hover:bg-orange-500 hover:text-white text-brand-700 font-bold px-2 py-2 rounded-lg transition text-sm group">
+                        <span x-text="formatMoneyShort(g.prices[d].brut_zebra || g.prices[d].gross_amount)"></span>
+                        <span class="block text-[10px] font-normal opacity-70 group-hover:opacity-100">Rezervă temporar</span>
+                      </button>
+                    </template>
+                    <template x-if="!g.prices[d]">
+                      <div class="text-slate-300 text-lg">—</div>
+                    </template>
+                  </td>
+                </template>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+        <div class="text-xs text-slate-400 mt-2 px-1">Apasă pe preț pentru a rezerva temporar. Prețurile sunt pentru <span x-text="paxLabel(true)"></span>.</div>
+      </div>
+
+      <!-- LIST VIEW -->
+      <div x-show="roomsViewMode==='list' && roomsList.length" class="grid gap-2">
+        <template x-for="r in roomsList" :key="r.price_id">
+          <div class="border rounded-xl p-3 hover:border-brand-400 hover:bg-brand-50/30 transition flex flex-wrap items-center gap-3">
+            <div class="flex-1 min-w-[200px]">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs rounded font-bold" x-text="mealHuman(r.meal)"></span>
+                <span class="font-semibold" x-text="roomHuman(r.room_type)"></span>
+                <span class="text-xs text-slate-500" x-text="'· ' + r.placement"></span>
+              </div>
+              <div class="text-xs text-slate-500 mt-1">
+                📅 <span x-text="formatDate(r.check_in) + ' → ' + formatDate(r.check_out)"></span>
+                · 🌙 <span x-text="r.nights + ' nopți'"></span>
+              </div>
+            </div>
+            <div class="text-right">
+              <div class="text-xs text-slate-500" x-text="'pentru ' + paxLabel(true)"></div>
+              <div class="text-xl font-bold text-brand-700" x-text="formatMoney(r.brut_zebra || r.gross_amount)"></div>
+            </div>
+            <button @click="roomsOpen=false; openReserve(r)" class="bg-orange-500 hover:bg-orange-600 text-white px-3 py-2 rounded-lg font-medium text-sm whitespace-nowrap">Rezervare temporară</button>
+          </div>
+        </template>
+      </div>
+    </div>
+    <div class="p-3 border-t bg-slate-50 text-center text-xs text-slate-500 rounded-b-2xl" x-text="roomsList.length + ' variante disponibile'"></div>
+  </div>
+</div>
+
+<!-- HOTEL DETAILS MODAL -->
+<div x-show="detailsOpen" x-cloak class="fixed inset-0 bg-black/70 z-50 flex items-start justify-center p-4 overflow-y-auto">
+  <div @click.away="detailsOpen=false" class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full my-4">
+    <div class="p-5 border-b flex justify-between items-start sticky top-0 bg-white z-10 rounded-t-2xl">
+      <div x-show="details">
+        <div class="flex items-center gap-2 flex-wrap">
+          <h3 class="font-bold text-2xl" x-text="details?.hotel_name"></h3>
+          <span class="text-amber-500 font-bold" x-text="details?.star"></span>
+        </div>
+        <div class="text-sm text-slate-500" x-text="'📍 ' + (details?.city || '') + ', ' + (details?.country || 'Bulgaria')"></div>
+      </div>
+      <button @click="detailsOpen=false" class="text-slate-400 hover:text-slate-600 text-3xl leading-none">×</button>
+    </div>
+
+    <div x-show="detailsLoading" class="p-12 text-center text-slate-400">Se încarcă detaliile...</div>
+
+    <div x-show="!detailsLoading && details" class="p-5">
+      <div x-show="details?.photos?.length" class="relative bg-slate-900 rounded-xl overflow-hidden mb-4" style="height: 400px;">
+        <template x-for="(photo, i) in details?.photos || []" :key="i">
+          <img :src="photo" x-show="photoIdx === i" class="absolute inset-0 w-full h-full object-contain" loading="lazy" onerror="this.style.display='none'">
+        </template>
+        <button @click="photoIdx = (photoIdx-1+(details?.photos?.length||1))%(details?.photos?.length||1)" x-show="(details?.photos?.length||0)>1" class="absolute left-3 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full w-12 h-12 flex items-center justify-center text-2xl font-bold">‹</button>
+        <button @click="photoIdx = (photoIdx+1)%(details?.photos?.length||1)" x-show="(details?.photos?.length||0)>1" class="absolute right-3 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full w-12 h-12 flex items-center justify-center text-2xl font-bold">›</button>
+        <div class="absolute bottom-3 left-1/2 -translate-x-1/2 bg-black/70 text-white px-3 py-1 rounded-full text-sm" x-show="(details?.photos?.length||0)>1" x-text="(photoIdx+1) + ' / ' + details?.photos?.length"></div>
+      </div>
+
+      <div x-show="(details?.photos?.length||0)>1" class="flex gap-2 overflow-x-auto pb-2 mb-4 scrollbar-hide">
+        <template x-for="(photo, i) in details?.photos || []" :key="'th'+i">
+          <img :src="photo" @click="photoIdx = i" :class="photoIdx === i ? 'ring-4 ring-brand-500' : 'opacity-70 hover:opacity-100'" class="w-24 h-20 object-cover rounded-lg cursor-pointer flex-shrink-0 transition" loading="lazy" onerror="this.style.display='none'">
+        </template>
+      </div>
+
+      <div x-show="details?.description" class="prose prose-sm max-w-none border-t pt-4 mb-4" x-html="details?.description"></div>
+
+      <div x-show="details?.map_frame" class="border-t pt-4">
+        <h4 class="font-semibold mb-2">📍 Pe hartă</h4>
+        <div class="rounded-xl overflow-hidden border" style="height: 320px;" x-html="details?.map_frame"></div>
+      </div>
+    </div>
+
+    <div class="p-5 border-t bg-slate-50 flex items-center justify-between gap-2 sticky bottom-0 rounded-b-2xl">
+      <div>
+        <div class="text-xs text-slate-500">Preț pentru această ofertă</div>
+        <div class="text-2xl font-extrabold text-brand-700" x-text="formatMoney(currentOffer?.brut_zebra || currentOffer?.gross_amount)"></div>
+      </div>
+      <div class="flex gap-2">
+        <button @click="detailsOpen=false" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg">Închide</button>
+        <button @click="detailsOpen=false; openReserve(currentOffer)" class="px-5 py-2 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-lg shadow-md">Rezervare temporară →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- RESERVATION MODAL -->
+<div x-show="reserveOpen" x-cloak class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 overflow-y-auto">
+  <div @click.away="reserveOpen=false" class="bg-white rounded-2xl shadow-2xl max-w-lg w-full">
+    <div class="p-5 border-b">
+      <h3 class="font-bold text-2xl">🎉 Rezervarea ta temporară</h3>
+      <p class="text-sm text-slate-500 mt-1">Completează datele și un agent Zebra Tur te va contacta în maxim 2 ore pentru confirmare. Fără plată acum.</p>
+    </div>
+
+    <div class="p-5">
+      <div class="bg-brand-50 border border-brand-200 rounded-xl p-3 mb-4 text-sm">
+        <div class="font-bold text-brand-700" x-text="currentOffer?.hotel_name + ' ' + (currentOffer?.star || '')"></div>
+        <div class="text-slate-700" x-text="'📍 ' + (currentOffer?.city || 'Bulgaria') + ' · ' + mealHuman(currentOffer?.meal)"></div>
+        <div class="text-slate-700" x-text="'📅 ' + formatDate(currentOffer?.check_in) + ' → ' + formatDate(currentOffer?.check_out) + ' (' + (currentOffer?.nights||0) + ' nopți)'"></div>
+        <div class="text-slate-700" x-text="'👥 ' + paxLabel(true)"></div>
+        <div class="text-lg font-extrabold text-brand-700 mt-1" x-text="formatMoney(currentOffer?.brut_zebra || currentOffer?.gross_amount)"></div>
+      </div>
+
+      <div class="space-y-3">
+        <div>
+          <label class="text-sm font-semibold">Numele tău complet *</label>
+          <input x-model="reserveForm.customer_name" type="text" placeholder="ex: Ion Popescu" class="w-full mt-1 border-2 border-slate-200 rounded-lg px-3 py-2 focus:border-brand-500 focus:outline-none">
+        </div>
+        <div>
+          <label class="text-sm font-semibold">Telefon *</label>
+          <input x-model="reserveForm.customer_phone" type="tel" placeholder="+373 69 ..." class="w-full mt-1 border-2 border-slate-200 rounded-lg px-3 py-2 focus:border-brand-500 focus:outline-none">
+        </div>
+        <div>
+          <label class="text-sm font-semibold">Mesaj pentru agent (opțional)</label>
+          <textarea x-model="reserveForm.notes" placeholder="ex: aș vrea cameră cu vedere la mare, am nevoie de transfer..." class="w-full mt-1 border-2 border-slate-200 rounded-lg px-3 py-2 h-20 focus:border-brand-500 focus:outline-none"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="p-5 border-t bg-slate-50 flex justify-between gap-2 rounded-b-2xl">
+      <button @click="reserveOpen=false" class="px-4 py-2 bg-white border hover:bg-slate-100 rounded-lg">Anulează</button>
+      <button @click="submitReserve()" :disabled="reserveBusy" class="px-6 py-2.5 bg-orange-500 hover:bg-orange-600 disabled:bg-slate-300 text-white font-bold rounded-lg shadow-md">
+        <span x-show="!reserveBusy">✅ Trimite rezervarea temporară</span>
+        <span x-show="reserveBusy">Se trimite...</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- SUCCESS MODAL -->
+<div x-show="successOpen" x-cloak class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 text-center">
+    <div class="text-6xl mb-3">🎉</div>
+    <h3 class="text-2xl font-bold mb-2">Mulțumim!</h3>
+    <p class="text-slate-600 mb-4" x-text="successMessage"></p>
+    <div class="bg-slate-50 rounded-xl p-3 text-sm mb-4">
+      <div class="text-slate-500">Numărul rezervării tale:</div>
+      <div class="font-mono font-bold text-brand-700 text-lg" x-text="'#' + successQuoteId"></div>
+    </div>
+    <button @click="successOpen=false" class="bg-brand-600 hover:bg-brand-700 text-white font-bold px-6 py-2.5 rounded-lg">Înțeles</button>
+  </div>
+</div>
+
+<footer class="bg-slate-900 text-slate-300 py-8 mt-12">
+  <div class="max-w-7xl mx-auto px-4 text-center">
+    <div class="font-extrabold text-xl mb-2">🦓 Zebra Tur</div>
+    <p class="text-sm">Tour operator licențiat · Republica Moldova</p>
+    <div class="text-xs text-slate-500 mt-4">© 2026 Zebra Tur · Toate drepturile rezervate</div>
+  </div>
+</footer>
+
+<script>
+function turistApp() {
+  return {
+    busy: false, paxOpen: false, sortBy: 'price_asc',
+    countries: [], cities: [], topCities: [],
+    meals: [], categories: [], facilities: [],
+    packages: [],
+    selectedPackage: null,
+    // Ordered worst → best. Clicking a tier selects it AND all higher tiers.
+    mealsShort: [
+      { id: 7, label: '☕ Mic dejun', full: 'Doar mic dejun' },
+      { id: 8, label: '🥐 Demi-pensiune', full: 'Mic dejun + cină' },
+      { id: 13, label: '🍴 Full Board', full: 'Mic dejun + prânz + cină' },
+      { id: 6, label: '🍽️ All Inclusive', full: 'Mese complete + băuturi' },
+      { id: 20, label: '🍾 Ultra All Inclusive', full: 'Mese complete + băuturi premium' },
+    ],
+    starsShort: [
+      { id: 7, label: '⭐⭐⭐', warning: true },   // categorie scăzută — evidențiată în roșu
+      { id: 5, label: '⭐⭐⭐⭐' },
+      { id: 6, label: '⭐⭐⭐⭐⭐' },
+    ],
+    topFacilities: [
+      { id: 39, label: '🏖️ Prima linie' },
+      { id: 21, label: '🏊 Piscină' },
+      { id: 33, label: '💦 Aquapark' },
+      { id: 8,  label: '⛱️ Șezlonguri plajă' },
+      { id: 41, label: '🔞 Adult Only' },
+      { id: 24, label: '📶 Wi-Fi' },
+      { id: 27, label: '🅿️ Parcare' },
+    ],
+    filters: {
+      tripType: 'bus',           // 'bus' = pachet cu autocar, 'self' = doar cazare
+      cityId: '',
+      dateFrom: defaultDate(3), dateTo: defaultDate(10),
+      nights: 7,
+      adults: 2, children: [],
+      mealIds: [6, 20],          // All Inclusive + Ultra All Inclusive
+      starIds: [5, 6],           // 4* + 5* (3* nu e preselectat — categorie inferioară)
+      facilityIds: [],
+    },
+    get activeFiltersCount() {
+      let n = 0;
+      if (this.filters.cityId) n++;
+      if (this.filters.mealIds.length) n += this.filters.mealIds.length;
+      if (this.filters.starIds.length) n += this.filters.starIds.length;
+      if (this.filters.facilityIds.length) n += this.filters.facilityIds.length;
+      return n;
+    },
+    resetFilters() {
+      this.filters.cityId = '';
+      this.filters.mealIds = [];
+      this.filters.starIds = [];
+      this.filters.facilityIds = [];
+    },
+    get pivotedRoomsModal() {
+      const datesSet = new Set();
+      const groups = {};
+      for (const r of this.roomsList) {
+        datesSet.add(r.check_in);
+        const key = `${r.meal}__${r.room_type}__${r.placement}`;
+        if (!groups[key]) groups[key] = { key, meal: r.meal, room_type: r.room_type, placement: r.placement, prices: {} };
+        const existing = groups[key].prices[r.check_in];
+        const price = r.brut_zebra || r.gross_amount || 0;
+        const oldPrice = existing ? (existing.brut_zebra || existing.gross_amount || Infinity) : Infinity;
+        if (price < oldPrice) groups[key].prices[r.check_in] = r;
+      }
+      const dates = [...datesSet].sort();
+      const groupList = Object.values(groups).sort((a, b) => {
+        const minA = Math.min(...Object.values(a.prices).map(p => p.brut_zebra || p.gross_amount || Infinity));
+        const minB = Math.min(...Object.values(b.prices).map(p => p.brut_zebra || p.gross_amount || Infinity));
+        return minA - minB;
+      });
+      return { dates, groups: groupList };
+    },
+    results: null, sortedPrices: [],
+    detailsOpen: false, detailsLoading: false, details: null, photoIdx: 0,
+    reserveOpen: false, reserveBusy: false,
+    roomsOpen: false, roomsLoading: false, roomsList: [], roomsViewMode: 'matrix',
+    favoritesOpen: false, favorites: [],
+    currentOffer: null,
+    reserveForm: { customer_name:'', customer_phone:'', notes:'' },
+    successOpen: false, successMessage: '', successQuoteId: '',
+
+    async init() {
+      this.loadFavorites();
+      const [cities, packages, facilities] = await Promise.all([
+        fetch('/api/dir/cities?country_id=1').then(r=>r.json()).catch(()=>[]),
+        fetch('/api/dir/packages?country_id=1').then(r=>r.json()).catch(()=>[]),
+        fetch('/api/dir/hotel_facilities').then(r=>r.json()).catch(()=>[]),
+      ]);
+      this.cities = Array.isArray(cities) ? cities : [];
+      this.facilities = Array.isArray(facilities) ? facilities : [];
+      this.packages = Array.isArray(packages) ? packages : [];
+      this.applySelectedPackage();
+
+      // Read URL params if present (came from hotel page's compact search bar)
+      const u = new URL(location);
+      const auto = u.searchParams.get('auto') === '1';
+      if (u.searchParams.has('in')) this.filters.dateFrom = u.searchParams.get('in');
+      if (u.searchParams.has('out')) this.filters.dateTo = u.searchParams.get('out');
+      if (u.searchParams.has('n')) this.filters.nights = parseInt(u.searchParams.get('n')) || 7;
+      if (u.searchParams.has('a')) this.filters.adults = parseInt(u.searchParams.get('a')) || 2;
+      if (u.searchParams.has('t')) {
+        this.filters.tripType = u.searchParams.get('t');
+        this.applySelectedPackage();
+      }
+      if (u.searchParams.has('city')) this.filters.cityId = u.searchParams.get('city');
+      // Top stațiuni populare
+      const popular = ['SUNNY BEACH', 'GOLDEN SANDS', 'NESSEBAR', 'POMORIE', 'ELENITE', 'ST. VLAS', 'ALBENA', 'BALCHIK', 'OBZOR', 'BANSKO', 'BURGAS', 'VARNA'];
+      this.topCities = this.cities
+        .filter(c => popular.includes((c.city_name||'').toUpperCase()))
+        .sort((a,b)=> popular.indexOf((a.city_name||'').toUpperCase()) - popular.indexOf((b.city_name||'').toUpperCase()))
+        .map(c => ({ id: c.city_id, name: cityHuman(c.city_name) }));
+
+      // Auto-execute search if redirected from offer page with filters
+      if (auto) {
+        setTimeout(() => this.search(), 100);
+      }
+    },
+    setTripType(t) {
+      this.filters.tripType = t;
+      this.applySelectedPackage();
+    },
+    applySelectedPackage() {
+      if (!this.packages.length) return;
+      const has = (p, ...need) => Array.isArray(p.content) && need.every(c => p.content.includes(c));
+      if (this.filters.tripType === 'bus') {
+        // Pachet cu transport (autocar) — preferăm pachetul cu transport + hotel + asigurare
+        this.selectedPackage =
+          this.packages.find(p => has(p, 'transport', 'hotel')) ||
+          this.packages.find(p => has(p, 'transport')) ||
+          this.packages[0];
+      } else {
+        // Doar cazare — pachet doar hotel
+        this.selectedPackage =
+          this.packages.find(p => Array.isArray(p.content) && p.content.length === 1 && p.content[0] === 'hotel') ||
+          this.packages.find(p => has(p, 'hotel') && !p.content.includes('transport')) ||
+          this.packages[0];
+      }
+    },
+    paxLabel(short=false) {
+      const a = this.filters.adults, c = this.filters.children.length;
+      if (short) return `${a} adult${a===1?'':'i'}` + (c ? `, ${c} copil${c===1?'':'i'}` : '');
+      return `${a} adult${a===1?'':'i'}` + (c ? ` + ${c} copil${c===1?'':'i'}` : '');
+    },
+    addChild() { if (this.filters.children.length < 4) this.filters.children.push(5); },
+    removeChild() { this.filters.children.pop(); },
+    toggleMeal(id) { this.toggleCascading(this.filters.mealIds, id, this.mealsShort); },
+    toggleStar(id) { this.toggleCascading(this.filters.starIds, id, this.starsShort); },
+    toggleFacility(id) { this.toggleId(this.filters.facilityIds, id); },
+    toggleId(arr, id) { const i = arr.indexOf(id); if (i>=0) arr.splice(i,1); else arr.push(id); },
+    // Cascading: ordered worst→best. Clicking a tier selects it + all higher; un-clicking removes only that tier.
+    toggleCascading(arr, id, ordered) {
+      const idx = ordered.findIndex(x => x.id === id);
+      if (idx < 0) return;
+      const isActive = arr.includes(id);
+      if (isActive) {
+        // Remove this tier only (keep higher ones the user explicitly wanted)
+        const i = arr.indexOf(id);
+        arr.splice(i, 1);
+      } else {
+        // Add this tier AND all higher tiers (better quality)
+        const toAdd = ordered.slice(idx).map(x => x.id);
+        for (const tid of toAdd) {
+          if (!arr.includes(tid)) arr.push(tid);
+        }
+      }
+    },
+
+    async search() {
+      this.busy = true;
+      this.results = null;
+      try {
+        if (!this.selectedPackage) {
+          toastMsg('Pachetele nu au fost încărcate. Reîncarcă pagina.');
+          return;
+        }
+        // For 'bus' trips we must use the package's own departure terminal (Chișinău)
+        const terminalId = (this.filters.tripType === 'bus' && this.selectedPackage.departure_terminals?.length)
+          ? this.selectedPackage.departure_terminals[0].id : 0;
+        const body = {
+          country_id: 1,
+          package_id: this.selectedPackage.id || this.selectedPackage.Id,
+          departure_terminal_id: terminalId,
+          from_date: this.filters.dateFrom,
+          to_date: this.filters.dateTo || this.filters.dateFrom,
+          from_nights: this.filters.nights, to_nights: this.filters.nights,
+          adults: this.filters.adults, children: this.filters.children,
+          meal_ids: this.filters.mealIds, star_ids: this.filters.starIds,
+          facility_ids: this.filters.facilityIds,
+          city_ids: this.filters.cityId ? [Number(this.filters.cityId)] : null,
+          markup_percent: 0,
+        };
+        const r = await fetch('/api/search/packages', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) }).then(r=>r.json());
+        if (r?.error) throw new Error(r.error);
+        this.results = r;
+        this.sortResults();
+        setTimeout(() => document.querySelector('.hotel-card')?.scrollIntoView({ behavior:'smooth', block:'start' }), 100);
+      } catch (e) {
+        toastMsg('Eroare la căutare: ' + e.message);
+      } finally {
+        this.busy = false;
+      }
+    },
+    sortResults() {
+      const prices = [...(this.results?.prices || [])];
+      const stars = (s) => parseInt(((s||'').match(/\d+/)||[0])[0]);
+      prices.sort((a,b) => {
+        if (this.sortBy === 'price_asc') return (a.brut_zebra||a.gross_amount||0) - (b.brut_zebra||b.gross_amount||0);
+        if (this.sortBy === 'price_desc') return (b.brut_zebra||b.gross_amount||0) - (a.brut_zebra||a.gross_amount||0);
+        if (this.sortBy === 'star_desc') return stars(b.star) - stars(a.star);
+        return 0;
+      });
+      this.sortedPrices = prices;
+    },
+
+    async openDetails(offer) {
+      this.currentOffer = offer;
+      this.detailsOpen = true;
+      this.detailsLoading = true;
+      this.details = null;
+      this.photoIdx = 0;
+      try {
+        const r = await fetch('/api/hotel/details', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({
+            hotel_id: offer.hotel_id,
+            from_date: offer.check_in || this.filters.dateFrom,
+            to_date: offer.check_in || this.filters.dateFrom,
+            from_nights: offer.nights || this.filters.nights,
+            to_nights: offer.nights || this.filters.nights,
+            adults: this.filters.adults, children: this.filters.children,
+          })
+        }).then(r=>r.json());
+        if (r?.error) throw new Error(r.error);
+        this.details = r;
+      } catch (e) {
+        toastMsg('Eroare: ' + e.message);
+        this.detailsOpen = false;
+      } finally {
+        this.detailsLoading = false;
+      }
+    },
+    async openRooms(offer) {
+      this.currentOffer = offer;
+      this.roomsOpen = true;
+      this.roomsLoading = true;
+      this.roomsList = [];
+      try {
+        const terminalId = (this.filters.tripType === 'bus' && this.selectedPackage.departure_terminals?.length)
+          ? this.selectedPackage.departure_terminals[0].id : 0;
+        const body = {
+          country_id: 1,
+          package_id: this.selectedPackage.id || this.selectedPackage.Id,
+          departure_terminal_id: terminalId,
+          hotel_id: offer.hotel_id,
+          from_date: this.filters.dateFrom,
+          to_date: this.filters.dateTo || this.filters.dateFrom,
+          from_nights: this.filters.nights, to_nights: this.filters.nights,
+          adults: this.filters.adults, children: this.filters.children,
+        };
+        const r = await fetch('/api/search/packages/hotel_rooms', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify(body),
+        }).then(r=>r.json());
+        if (r?.error) throw new Error(r.error);
+        this.roomsList = (r.prices || []).sort((a,b) => (a.brut_zebra||a.gross_amount) - (b.brut_zebra||b.gross_amount));
+      } catch (e) {
+        toastMsg('Eroare: ' + e.message);
+        this.roomsOpen = false;
+      } finally {
+        this.roomsLoading = false;
+      }
+    },
+    // ---------- favorites ----------
+    loadFavorites() {
+      try { this.favorites = JSON.parse(localStorage.getItem('zebra-favorites') || '[]'); }
+      catch { this.favorites = []; }
+    },
+    saveFavorites() {
+      localStorage.setItem('zebra-favorites', JSON.stringify(this.favorites));
+    },
+    isFavorite(offer) {
+      return this.favorites.some(f => f.price_id === offer.price_id);
+    },
+    offerUrl(offer) {
+      const params = new URLSearchParams({
+        in: this.filters.dateFrom,
+        out: this.filters.dateTo,
+        n: this.filters.nights,
+        a: this.filters.adults,
+        p: (this.selectedPackage?.id || this.selectedPackage?.Id || 87),
+        t: this.filters.tripType,
+      });
+      if (this.filters.children.length) params.set('c', this.filters.children.join(','));
+      return `/turist/hotel/${offer.hotel_id}?${params.toString()}`;
+    },
+    toggleFavorite(offer) {
+      const i = this.favorites.findIndex(f => f.price_id === offer.price_id);
+      if (i >= 0) {
+        this.favorites.splice(i, 1);
+        toastMsg('💔 Eliminat din favorite');
+      } else {
+        // Store a lean copy with only what we need (incl. canonical URL for share)
+        this.favorites.unshift({
+          price_id: offer.price_id, hotel_id: offer.hotel_id, hotel_name: offer.hotel_name,
+          star: offer.star, city: offer.city, meal: offer.meal, room_type: offer.room_type,
+          placement: offer.placement, nights: offer.nights, check_in: offer.check_in, check_out: offer.check_out,
+          gross_amount: offer.gross_amount, brut_zebra: offer.brut_zebra, currency: offer.currency,
+          default_photo: offer.default_photo, discount: offer.discount,
+          url: this.offerUrl(offer),
+          saved_at: new Date().toISOString(),
+        });
+        toastMsg('❤️ Adăugat la favorite!');
+      }
+      this.saveFavorites();
+    },
+    clearFavorites() {
+      if (!confirm('Sigur ștergi toate favoritele?')) return;
+      this.favorites = [];
+      this.saveFavorites();
+      toastMsg('Favoritele au fost șterse');
+    },
+    formatFavoriteText(f) {
+      const lines = [
+        `🏨 ${f.hotel_name} ${f.star || ''}`,
+        `📍 ${f.city || 'Bulgaria'}`,
+        `📅 ${formatDate(f.check_in)} → ${formatDate(f.check_out)} (${f.nights} nopți)`,
+        `🍽️ ${mealHuman(f.meal)}`,
+        `🛏️ ${roomHuman(f.room_type)}`,
+        `💶 ${formatMoney(f.brut_zebra || f.gross_amount)} pentru ${this.paxLabel(true)}`,
+      ];
+      if (f.url) lines.push(`🔗 ${location.origin}${f.url}`);
+      return lines.join('\n');
+    },
+    copyFavorite(f) {
+      const text = this.formatFavoriteText(f);
+      navigator.clipboard.writeText(text).then(() => toastMsg('✅ Copiat în clipboard!'))
+        .catch(() => fallbackCopy(text));
+    },
+    copyLinkOnly(f) {
+      const url = f.url ? `${location.origin}${f.url}` : `${location.origin}/turist/hotel/${f.hotel_id}`;
+      navigator.clipboard.writeText(url).then(() => toastMsg('🔗 Link copiat!'))
+        .catch(() => fallbackCopy(url));
+    },
+    copyAllFavorites() {
+      if (!this.favorites.length) return;
+      const header = `🦓 Zebra Tur — ${this.favorites.length} oferte salvate\n${'─'.repeat(40)}\n\n`;
+      const body = this.favorites.map((f, i) => `${i+1}. ${this.formatFavoriteText(f)}`).join('\n\n');
+      const footer = `\n\n${'─'.repeat(40)}\n📞 Contact Zebra Tur: +37378326222`;
+      const text = header + body + footer;
+      navigator.clipboard.writeText(text).then(() => toastMsg(`✅ ${this.favorites.length} oferte copiate!`))
+        .catch(() => fallbackCopy(text));
+    },
+    shareFavorites() {
+      if (!this.favorites.length) return;
+      const header = `🦓 Zebra Tur — ${this.favorites.length} oferte salvate\n\n`;
+      const body = this.favorites.map((f, i) => `${i+1}. ${this.formatFavoriteText(f)}`).join('\n\n');
+      const text = encodeURIComponent(header + body);
+      window.open(`https://wa.me/?text=${text}`, '_blank');
+    },
+
+    openReserve(offer) {
+      this.currentOffer = offer;
+      this.reserveForm = { customer_name:'', customer_phone:'', notes:'' };
+      this.reserveOpen = true;
+    },
+    async submitReserve() {
+      const f = this.reserveForm;
+      if (!f.customer_name || !f.customer_phone) { toastMsg('Completează numele și telefonul'); return; }
+      this.reserveBusy = true;
+      try {
+        const body = {
+          ...f,
+          adults: this.filters.adults,
+          children_ages: this.filters.children.join(', '),
+          offer: this.currentOffer,
+        };
+        const r = await fetch('/api/turist/reserve', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify(body),
+        }).then(r=>r.json());
+        if (r?.error) throw new Error(r.error);
+        this.reserveOpen = false;
+        this.successQuoteId = r.quote_id;
+        this.successMessage = r.message || 'Rezervarea a fost trimisă cu succes!';
+        this.successOpen = true;
+      } catch (e) {
+        toastMsg('Eroare: ' + e.message);
+      } finally {
+        this.reserveBusy = false;
+      }
+    },
+  }
+}
+
+function defaultDate(addDays) {
+  const d = new Date();
+  d.setDate(d.getDate() + (addDays || 0));
+  return d.toISOString().slice(0,10);
+}
+function formatMoney(n) {
+  if (n == null) return '—';
+  return new Intl.NumberFormat('ro-RO', { style:'currency', currency:'EUR', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n);
+}
+function formatDate(s) {
+  if (!s) return '—';
+  try { const [y,m,d] = s.split('-'); return `${d}.${m}.${y}`; } catch { return s; }
+}
+function formatDateShort(s) { if (!s) return '—'; try { const [y,m,d] = s.split('-'); return `${d}.${m}`; } catch { return s; } }
+function formatMoneyShort(n) { if (n==null) return '—'; return Math.round(n) + '€'; }
+function dateDayShort(s) {
+  if (!s) return '';
+  try { const d = new Date(s); return ['Du','Lu','Ma','Mi','Jo','Vi','Sâ'][d.getDay()]; } catch { return ''; }
+}
+function mealHuman(meal) {
+  const m = { 'ALL INCLUSIVE': '🍽️ All Inclusive', 'AI': '🍽️ All Inclusive',
+    'ULTRA ALL': '🍾 Ultra All Inclusive', 'PREMIUM ALL': '💎 Premium All Inclusive',
+    'AI LIGHT': '🍽️ All Inclusive Light', 'ALL LIGHT': '🍽️ All Inclusive Light',
+    'BB': '☕ Mic dejun', 'BED AND BREAKFAST': '☕ Mic dejun',
+    'HB': '🥐 Mic dejun + cină', 'HALF BOARD': '🥐 Mic dejun + cină',
+    'FB': '🍴 Trei mese pe zi', 'FULL BOARD': '🍴 Trei mese pe zi',
+    'RO': '🛏️ Doar cazare', 'ROOM ONLY': '🛏️ Doar cazare',
+  };
+  return m[meal] || meal || '—';
+}
+function roomHuman(room) {
+  if (!room) return '—';
+  return room.replace(/DBL\b/gi, 'Cameră dublă')
+             .replace(/SGL\b/gi, 'Cameră single')
+             .replace(/TPL\b/gi, 'Cameră triplă')
+             .replace(/STUDIO/gi, 'Studio')
+             .replace(/APT/gi, 'Apartament');
+}
+function cityHuman(s) {
+  if (!s) return '';
+  return s.split(' ').map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(' ');
+}
+function fallbackCopy(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand('copy'); toastMsg('✅ Copiat!'); }
+  catch { toastMsg('Nu am putut copia automat. Selectează și copiază manual.'); }
+  document.body.removeChild(ta);
+}
+function toastMsg(text) {
+  const el = document.createElement('div');
+  el.className = 'fixed bottom-6 right-6 bg-slate-900 text-white px-4 py-2.5 rounded-lg shadow-2xl z-[100]';
+  el.textContent = text;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+tailwind.config = { theme: { extend: { colors: {
+  brand: {50:'#f5f7ff',100:'#e7ecfe',200:'#cdd6fb',500:'#4f63e6',600:'#3a48d0',700:'#2f38aa',800:'#2b3389',900:'#262c6e'},
+}}}};
+</script>
+</body>
+</html>
