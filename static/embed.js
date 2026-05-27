@@ -225,13 +225,65 @@
     .zt-fav-row:hover { border-color: #fecdd3; background: #fff1f2; }
     .zt-fav-img { width: 88px; height: 88px; flex-shrink: 0; background: #e2e8f0; border-radius: 10px; overflow: hidden; }
     .zt-fav-img img { width: 100%; height: 100%; object-fit: cover; }
-    @media (max-width: 640px) {
-      .zt-hero h1 { font-size: 22px; }
-      .zt-hero { padding: 20px 16px; }
-      .zt-card { padding: 14px; border-radius: 14px; }
-      .zt-results-grid { grid-template-columns: 1fr; }
-      .zt-modal { padding: 10px; }
-      .zt-modal-body { border-radius: 14px; }
+    .zt-search-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+    .zt-search-grid > .zt-cell-dates { grid-column: 1 / 2; }
+    .zt-date-range { display: flex; gap: 4px; align-items: center; }
+    .zt-date-range > .zt-input { flex: 1; min-width: 0; }
+    .zt-radio-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+    @media (max-width: 720px) {
+      #zebra-tur-widget > .zt-app { padding: 8px !important; }
+      .zt-hero h1 { font-size: 20px; }
+      .zt-hero { padding: 16px 12px; border-radius: 12px; }
+      .zt-hero p { font-size: 13px; }
+      .zt-card { padding: 12px; border-radius: 12px; }
+      .zt-results-grid { grid-template-columns: 1fr; gap: 10px; }
+      .zt-modal { padding: 8px; }
+      .zt-modal-body { border-radius: 12px; }
+      .zt-modal-header { padding: 14px; }
+      .zt-modal-footer { padding: 12px 14px; }
+
+      /* Stack search filters cleanly on mobile */
+      .zt-search-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+      .zt-search-grid > .zt-cell-dates { grid-column: 1 / 3; }
+
+      /* Trip type cards stack vertically */
+      .zt-radio-grid { grid-template-columns: 1fr; gap: 8px; }
+      .zt-radio-card { min-width: 0; padding: 12px; }
+      .zt-trip-icon { font-size: 24px; }
+      .zt-trip-title { font-size: 14px; }
+      .zt-trip-desc { font-size: 11px; }
+
+      /* Date inputs — vertical with arrow between */
+      .zt-date-range { flex-direction: column; gap: 6px; align-items: stretch; }
+      .zt-date-range > span { display: none; }
+      .zt-input, .zt-select { padding: 9px 10px; font-size: 14px; }
+      .zt-label { font-size: 10px; margin-bottom: 4px; }
+
+      /* Chips: compact but tappable */
+      .zt-chip { padding: 6px 10px; font-size: 12px; }
+      .zt-btn { padding: 8px 14px; font-size: 14px; }
+
+      /* Hotel cards */
+      .zt-hotel-name { font-size: 14px; }
+      .zt-price { font-size: 20px; }
+
+      /* Matrix: smaller cells */
+      .zt-matrix th, .zt-matrix td { padding: 4px 2px; font-size: 11px; }
+      .zt-matrix th.zt-matrix-date { min-width: 60px; }
+      .zt-matrix-roomname { font-size: 12px; }
+      .zt-matrix-price { padding: 6px 2px; font-size: 12px; }
+
+      /* FAB smaller on mobile, doesn't cover content */
+      .zt-fav-fab { width: 52px; height: 52px; font-size: 22px; left: 14px; bottom: 14px; }
+      .zt-fav-fab-badge { width: 22px; height: 22px; font-size: 11px; }
+
+      /* Pax dropdown panel — narrower */
+      .zt-pax-panel { width: calc(100vw - 32px) !important; max-width: 280px; }
+    }
+    @media (max-width: 380px) {
+      .zt-hero h1 { font-size: 18px; }
+      .zt-search-grid { grid-template-columns: 1fr; }
+      .zt-search-grid > .zt-cell-dates { grid-column: 1; }
     }
   `;
 
@@ -243,7 +295,7 @@
         <p>Plajă, soare și hoteluri de top — la cele mai bune prețuri</p>
       </div>
       <div class="zt-card" style="margin-bottom:16px;">
-        <div class="zt-row" style="margin-bottom:14px;">
+        <div class="zt-radio-grid">
           <button class="zt-radio-card ${S.filters.tripType==='bus'?'zt-radio-card-active':''}" data-action="trip" data-value="bus">
             <div class="zt-trip-icon">🚌</div>
             <div><div class="zt-trip-title">Pachet cu autocar ${S.filters.tripType==='bus'?'<span style="color:#3a48d0">✓</span>':''}</div><div class="zt-trip-desc">Transport Chișinău ⇄ Bulgaria + cazare + asigurare + transfer</div></div>
@@ -254,10 +306,10 @@
           </button>
         </div>
 
-        <div class="zt-grid" style="grid-template-columns: 1fr 1fr 1fr 1fr; margin-bottom:14px;">
-          <div style="grid-column:1/3;">
+        <div class="zt-search-grid">
+          <div class="zt-cell-dates">
             <label class="zt-label">📅 Plecare în perioada</label>
-            <div class="zt-row" style="gap:4px;">
+            <div class="zt-date-range">
               <input type="date" class="zt-input" data-action="filter" data-key="dateFrom" value="${esc(S.filters.dateFrom)}">
               <span style="color:#94a3b8;font-weight:700;">→</span>
               <input type="date" class="zt-input" data-action="filter" data-key="dateTo" value="${esc(S.filters.dateTo)}">
@@ -329,7 +381,7 @@
 
   function tplPaxPanel() {
     return `
-      <div style="position:absolute;right:0;top:100%;margin-top:6px;background:white;border:2px solid #e2e8f0;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.12);padding:14px;z-index:10;width:280px;">
+      <div class="zt-pax-panel" style="position:absolute;right:0;top:100%;margin-top:6px;background:white;border:2px solid #e2e8f0;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.12);padding:14px;z-index:10;width:280px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
           <div><div style="font-weight:600;">Adulți</div><div style="font-size:11px;color:#64748b;">12+ ani</div></div>
           <div class="zt-row" style="gap:6px;">
