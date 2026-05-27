@@ -101,6 +101,33 @@
 
   // ============ STYLES ============
   var STYLES = `
+    /* Override host theme CSS that might hide the widget */
+    #zebra-tur-widget {
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      height: auto !important;
+      min-height: 600px !important;
+      max-height: none !important;
+      width: 100% !important;
+      overflow: visible !important;
+      position: relative !important;
+      z-index: 1 !important;
+      clip: auto !important;
+      clip-path: none !important;
+    }
+    #zebra-tur-widget > .zt-app {
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      width: 100% !important;
+      max-width: 1280px !important;
+      margin: 0 auto !important;
+      padding: 16px !important;
+    }
+    #zebra-tur-widget .zt-app * {
+      visibility: visible !important;
+    }
     .zt-app { font-family: Inter, system-ui, -apple-system, Segoe UI, Arial, sans-serif; color: #0b1020; }
     .zt-app *, .zt-app *::before, .zt-app *::after { box-sizing: border-box; }
     .zt-card { background: #fff; border-radius: 18px; box-shadow: 0 4px 24px rgba(13,16,42,0.08); padding: 20px; }
@@ -846,6 +873,25 @@
       rootEl.id = CONTAINER_ID;
       if (current && current.parentNode) current.parentNode.insertBefore(rootEl, current.nextSibling);
       else document.body.appendChild(rootEl);
+    }
+
+    // Force visibility via inline styles (highest priority — beats host theme CSS)
+    rootEl.style.cssText = 'display:block !important; visibility:visible !important; opacity:1 !important; ' +
+      'height:auto !important; min-height:600px !important; max-height:none !important; ' +
+      'width:100% !important; overflow:visible !important; position:relative !important; ' +
+      'z-index:1 !important; clip:auto !important; clip-path:none !important; margin:0 auto !important;';
+
+    // Also walk up the DOM and remove any obvious hiding rules on ancestor containers (Creatium often wraps widgets)
+    var node = rootEl.parentNode;
+    var depth = 0;
+    while (node && node !== document.body && depth < 6) {
+      var cs = window.getComputedStyle(node);
+      if (cs.display === 'none' || cs.visibility === 'hidden' ||
+          parseInt(cs.height) === 0 || parseInt(cs.maxHeight) === 0) {
+        node.style.cssText += 'display:block !important; visibility:visible !important; height:auto !important; max-height:none !important; overflow:visible !important;';
+      }
+      node = node.parentNode;
+      depth++;
     }
 
     // Inject styles once
