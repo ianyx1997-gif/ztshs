@@ -229,7 +229,9 @@
     .zt-search-grid > .zt-cell-dates { grid-column: 1 / 2; }
     .zt-date-range { display: flex; gap: 4px; align-items: center; }
     .zt-date-range > .zt-input { flex: 1; min-width: 0; }
+    .zt-date-arrow { color: #94a3b8; font-weight: 700; flex-shrink: 0; }
     .zt-radio-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+    .zt-dual-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     @media (max-width: 720px) {
       #zebra-tur-widget > .zt-app { padding: 8px !important; }
       .zt-hero h1 { font-size: 20px; }
@@ -242,9 +244,12 @@
       .zt-modal-header { padding: 14px; }
       .zt-modal-footer { padding: 12px 14px; }
 
-      /* Stack search filters cleanly on mobile */
-      .zt-search-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
-      .zt-search-grid > .zt-cell-dates { grid-column: 1 / 3; }
+      /* Mobile layout: dates side-by-side full width, then 2x2 grid */
+      .zt-search-grid { display: block; }
+      .zt-search-grid > .zt-cell-dates { margin-bottom: 10px; }
+      .zt-date-range { display: grid !important; grid-template-columns: 1fr 1fr; gap: 6px; flex-direction: row; }
+      .zt-date-arrow { display: none !important; }
+      .zt-mobile-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 
       /* Trip type cards stack vertically */
       .zt-radio-grid { grid-template-columns: 1fr; gap: 8px; }
@@ -253,10 +258,7 @@
       .zt-trip-title { font-size: 14px; }
       .zt-trip-desc { font-size: 11px; }
 
-      /* Date inputs — vertical with arrow between */
-      .zt-date-range { flex-direction: column; gap: 6px; align-items: stretch; }
-      .zt-date-range > span { display: none; }
-      .zt-input, .zt-select { padding: 9px 10px; font-size: 14px; }
+      .zt-input, .zt-select { padding: 9px 8px; font-size: 13px; }
       .zt-label { font-size: 10px; margin-bottom: 4px; }
 
       /* Chips: compact but tappable */
@@ -311,24 +313,26 @@
             <label class="zt-label">📅 Plecare în perioada</label>
             <div class="zt-date-range">
               <input type="date" class="zt-input" data-action="filter" data-key="dateFrom" value="${esc(S.filters.dateFrom)}">
-              <span style="color:#94a3b8;font-weight:700;">→</span>
+              <span class="zt-date-arrow">→</span>
               <input type="date" class="zt-input" data-action="filter" data-key="dateTo" value="${esc(S.filters.dateTo)}">
             </div>
           </div>
-          <div>
-            <label class="zt-label">🌙 Nopți</label>
-            <select class="zt-select" data-action="filter" data-key="nights">
-              ${[1,2,3,4,5,6,7,8,9,10,11,12,13,14].map(function(n){
-                return '<option value="'+n+'"'+(S.filters.nights===n?' selected':'')+'>'+n+' nopți</option>';
-              }).join('')}
-            </select>
-          </div>
-          <div style="position:relative;">
-            <label class="zt-label">👥 Turiști</label>
-            <button class="zt-select" style="text-align:left;cursor:pointer;" data-action="paxToggle">
-              ${paxLabel()} <span style="float:right;color:#94a3b8;">▾</span>
-            </button>
-            ${S.paxOpen ? tplPaxPanel() : ''}
+          <div class="zt-mobile-row" style="display:contents;">
+            <div>
+              <label class="zt-label">🌙 Nopți</label>
+              <select class="zt-select" data-action="filter" data-key="nights">
+                ${[1,2,3,4,5,6,7,8,9,10,11,12,13,14].map(function(n){
+                  return '<option value="'+n+'"'+(S.filters.nights===n?' selected':'')+'>'+n+' nopți</option>';
+                }).join('')}
+              </select>
+            </div>
+            <div style="position:relative;">
+              <label class="zt-label">👥 Turiști</label>
+              <button class="zt-select" style="text-align:left;cursor:pointer;" data-action="paxToggle">
+                ${paxLabel()} <span style="float:right;color:#94a3b8;">▾</span>
+              </button>
+              ${S.paxOpen ? tplPaxPanel() : ''}
+            </div>
           </div>
         </div>
 
@@ -477,16 +481,18 @@
   }
 
   function tplHotelHeader(h) {
+    var hasRooms = S.hotelRooms && S.hotelRooms.length > 0;
     return `
       <div class="zt-card" style="margin-bottom:14px;">
         <div class="zt-row" style="justify-content:space-between;align-items:flex-start;">
-          <div>
+          <div style="flex:1;min-width:200px;">
             <h1 style="margin:0;font-size:26px;font-weight:800;">${esc(h.hotel_name)} <span style="color:#d97706;">${esc(h.star || '')}</span></h1>
             <div style="color:#64748b;font-size:14px;margin-top:4px;">📍 ${esc(h.city || '')}, ${esc(h.country || 'Bulgaria')}</div>
           </div>
-          <div class="zt-row">
+          <div class="zt-row" style="gap:6px;flex-wrap:wrap;">
             <button class="zt-btn zt-btn-secondary" data-action="toggleFavHotel">${isFavHotel() ? '❤️ Salvat' : '🤍 Salvează'}</button>
             <button class="zt-btn zt-btn-secondary" data-action="shareLink">🔗 Copiază link</button>
+            ${hasRooms ? '<button class="zt-btn zt-btn-primary" data-action="reserveCheapest">⚡ Rezervare temporară</button>' : ''}
           </div>
         </div>
       </div>
@@ -846,6 +852,20 @@
       if (cheap) toggleFav(Object.assign({}, cheap, { hotel_id: S.hotel.hotel_id, hotel_name: S.hotel.hotel_name, star: S.hotel.star, city: S.hotel.city, default_photo: S.hotel.default_photo }));
     }
     else if (a === 'shareLink') copyToClipboard(location.href);
+    else if (a === 'reserveCheapest') {
+      if (S.hotelRooms && S.hotelRooms.length) {
+        var cheapest = S.hotelRooms[0];  // already sorted by price asc
+        var enriched = Object.assign({}, cheapest, {
+          hotel_name: S.hotel ? S.hotel.hotel_name : cheapest.hotel_name,
+          star: S.hotel ? S.hotel.star : cheapest.star,
+          city: S.hotel ? S.hotel.city : cheapest.city,
+          default_photo: S.hotel ? S.hotel.default_photo : cheapest.default_photo,
+        });
+        openReserve(enriched);
+      } else {
+        toast('Nu sunt camere disponibile pentru rezervare', 'error');
+      }
+    }
     else if (a === 'reserve') {
       var off = findOffer(t.getAttribute('data-priceid'));
       if (off) openReserve(off);
@@ -958,6 +978,29 @@
     document.addEventListener('click', onClick);
     document.addEventListener('change', onChange);
     document.addEventListener('input', onInput);
+
+    // Touch swipe for photo gallery
+    var tStartX = 0, tStartY = 0, tStarted = false;
+    document.addEventListener('touchstart', function(ev) {
+      var stage = ev.target.closest('.zt-photo-stage, .zt-photo-thumbs');
+      if (!stage || stage.classList.contains('zt-photo-thumbs')) { tStarted = false; return; }
+      tStartX = ev.touches[0].clientX;
+      tStartY = ev.touches[0].clientY;
+      tStarted = true;
+    }, { passive: true });
+    document.addEventListener('touchend', function(ev) {
+      if (!tStarted) return;
+      tStarted = false;
+      var t = ev.changedTouches[0];
+      var dx = t.clientX - tStartX;
+      var dy = t.clientY - tStartY;
+      if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.3) {
+        if (!S.hotel || !S.hotel.photos || !S.hotel.photos.length) return;
+        if (dx < 0) S.hotelPhotoIdx = (S.hotelPhotoIdx + 1) % S.hotel.photos.length;
+        else S.hotelPhotoIdx = (S.hotelPhotoIdx - 1 + S.hotel.photos.length) % S.hotel.photos.length;
+        render();
+      }
+    }, { passive: true });
 
     // Load directories
     try {
