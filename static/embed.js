@@ -293,7 +293,7 @@
     .zt-hotel-photo { position: relative; aspect-ratio: 4/3; background: #e2e8f0; overflow: hidden; }
     .zt-hotel-photo img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s; }
     .zt-hotel-card:hover .zt-hotel-photo img { transform: scale(1.05); }
-    .zt-badge-star { position: absolute; top: 10px; left: 10px; background: rgba(255,255,255,0.95); color: #d97706; font-weight: 700; padding: 3px 8px; border-radius: 999px; font-size: 13px; backdrop-filter: blur(4px); }
+    .zt-badge-star { position: absolute; top: 12px; left: 12px; background: rgba(255,255,255,0.95); color: #d97706; font-weight: 800; padding: 6px 12px; border-radius: 999px; font-size: 16px; backdrop-filter: blur(4px); box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
     .zt-fav-btn { position: absolute; top: 10px; right: 10px; width: 38px; height: 38px; background: rgba(255,255,255,0.95); border: 0; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); transition: transform 0.15s; }
     .zt-fav-btn:hover { transform: scale(1.1); }
     .zt-hotel-body { padding: 12px 14px; }
@@ -607,7 +607,7 @@
           </button>
         </div>
         <div class="zt-hotel-body">
-          <div class="zt-hotel-name">${esc(o.hotel_name)}</div>
+          <div class="zt-hotel-name">${esc(o.hotel_name)}${o.star ? ' <span style="color:#d97706;font-weight:800;">'+esc(o.star)+'</span>' : ''}</div>
           <div class="zt-hotel-meta">📍 ${esc(o.city || 'Bulgaria')}</div>
           <div class="zt-hotel-meta">
             <div class="zt-hotel-meta-row">📅 ${formatDate(o.check_in)} → ${formatDate(o.check_out)}</div>
