@@ -177,8 +177,8 @@
     .zt-hotel-footer { display: flex; align-items: flex-end; justify-content: space-between; margin-top: 10px; padding-top: 10px; border-top: 1px solid #f1f5f9; }
     .zt-price-pax { font-size: 11px; color: #64748b; }
     .zt-price { font-size: 24px; font-weight: 800; color: #3a48d0; line-height: 1; }
-    .zt-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 999999; display: flex; align-items: flex-start; justify-content: center; padding: 20px; overflow-y: auto; }
-    .zt-modal-body { background: white; border-radius: 18px; max-width: 1000px; width: 100%; margin-top: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+    .zt-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 999999; display: flex; align-items: center; justify-content: center; padding: 20px; overflow-y: auto; }
+    .zt-modal-body { background: white; border-radius: 18px; max-width: 1000px; width: 100%; margin: auto; max-height: calc(100vh - 40px); overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
     .zt-modal-header { display: flex; justify-content: space-between; align-items: flex-start; padding: 20px; border-bottom: 1px solid #f1f5f9; position: sticky; top: 0; background: white; z-index: 2; border-radius: 18px 18px 0 0; }
     .zt-modal-close { background: none; border: 0; cursor: pointer; font-size: 28px; color: #94a3b8; line-height: 1; padding: 0 4px; font-family: inherit; }
     .zt-modal-close:hover { color: #475569; }
@@ -699,16 +699,31 @@
     } finally {
       S.loading = false;
       render();
-      // Scroll widget into view
-      var c = document.getElementById(CONTAINER_ID);
-      if (c) c.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // Scroll to the results section so user sees what was found
+      setTimeout(function() {
+        var resultsHeader = rootEl && rootEl.querySelector('.zt-results-grid');
+        if (resultsHeader) {
+          resultsHeader.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else {
+          // Fallback: scroll to the results area (h2 with count)
+          var resultsAnchor = rootEl && rootEl.querySelector('h2');
+          if (resultsAnchor) resultsAnchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 100);
     }
+  }
+
+  function scrollToWidgetTop() {
+    if (!rootEl) return;
+    rootEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   async function openHotel(hotelId, priceId) {
     S.view = 'hotel'; S.hotel = null; S.hotelRooms = []; S.hotelPhotoIdx = 0;
     writeHash({ h: hotelId, in: S.filters.dateFrom, out: S.filters.dateTo, n: S.filters.nights, a: S.filters.adults, t: S.filters.tripType });
     render();
+    // Scroll to top of widget so user sees the hotel name and photos first
+    setTimeout(scrollToWidgetTop, 50);
     var pkg = pickPackage();
     var terminalId = (S.filters.tripType === 'bus' && pkg && pkg.departure_terminals && pkg.departure_terminals.length) ? pkg.departure_terminals[0].id : 0;
     try {
