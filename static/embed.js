@@ -44,7 +44,7 @@
       forPax: 'pentru',
       mealBreakfast: '☕ Mic dejun', mealHB: '🥐 Demi-pensiune', mealFB: '🍴 Full Board', mealAI: '🍽️ All Inclusive', mealUltra: '🍾 Ultra All',
       facFirstLine: '🏖️ Prima linie', facPool: '🏊 Piscină', facAqua: '💦 Aquapark', facBeach: '⛱️ Plajă', facAdult: '🔞 Adult Only', facWifi: '📶 Wi-Fi', facParking: '🅿️ Parcare',
-      details: 'Vezi →',
+      details: 'Vezi oferta →',
       backToSearch: '← Înapoi la căutare',
       save: '🤍 Salvează', saved: '❤️ Salvat', copyLink: '🔗 Copiază link', reserveTemp: '⚡ Rezervare temporară',
       roomsTitle: '🛏️ Camere și prețuri disponibile',
@@ -341,13 +341,13 @@
     .zt-fav-fab { position: fixed; left: 20px; bottom: 20px; width: 60px; height: 60px; background: linear-gradient(135deg, #ec4899, #e11d48); color: white; border: 0; border-radius: 50%; cursor: pointer; font-size: 28px; box-shadow: 0 8px 24px rgba(225,29,72,0.4); z-index: 9998; display: flex; align-items: center; justify-content: center; transition: transform 0.15s; }
     .zt-fav-fab:hover { transform: scale(1.1); }
     .zt-fav-fab-badge { position: absolute; top: -4px; right: -4px; background: white; color: #e11d48; border: 2px solid #e11d48; border-radius: 50%; width: 26px; height: 26px; font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
-    .zt-fav-panel { position: fixed !important; left: 0; top: 0; bottom: 0; width: 100%; max-width: 480px; background: white; box-shadow: 8px 0 32px rgba(0,0,0,0.2); z-index: 999999 !important; transform: translateX(-100%); transition: transform 0.3s; display: flex; flex-direction: column; pointer-events: auto; }
+    .zt-fav-panel { position: fixed !important; left: 0; top: 0; bottom: 70px; width: 100%; max-width: 480px; background: white; box-shadow: 8px 0 32px rgba(0,0,0,0.2); z-index: 2147483646 !important; transform: translateX(-100%); transition: transform 0.3s; display: flex; flex-direction: column; pointer-events: auto; border-radius: 0 0 18px 0; }
     .zt-fav-panel.zt-open { transform: translateX(0); }
-    .zt-fav-panel * { pointer-events: auto !important; }
+    .zt-fav-panel *, .zt-fav-panel button { pointer-events: auto !important; touch-action: manipulation; }
     .zt-fav-panel-header { padding: 14px 16px; border-bottom: 1px solid #e2e8f0; flex-shrink: 0; font-weight: 700; font-size: 18px; background: white; position: relative; z-index: 2; }
-    .zt-fav-panel-body { flex: 1; overflow-y: auto; padding: 12px; position: relative; z-index: 1; }
-    .zt-fav-panel-footer { padding: 10px 12px; border-top: 1px solid #e2e8f0; background: #f8fafc; flex-shrink: 0; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; position: relative; z-index: 2; }
-    .zt-fav-panel-footer button, .zt-fav-panel-body button { cursor: pointer; position: relative; z-index: 3; }
+    .zt-fav-panel-body { flex: 1; overflow-y: auto; padding: 12px; position: relative; z-index: 1; -webkit-overflow-scrolling: touch; }
+    .zt-fav-panel-footer { padding: 12px 14px 14px; border-top: 1px solid #e2e8f0; background: #f8fafc; flex-shrink: 0; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; position: relative; z-index: 2; border-radius: 0 0 18px 0; }
+    .zt-fav-panel-footer button, .zt-fav-panel-body button { cursor: pointer; position: relative; z-index: 3; touch-action: manipulation; }
     .zt-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 999998; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
     .zt-overlay.zt-open { opacity: 1; pointer-events: auto; }
     .zt-fav-row { display: flex; gap: 12px; padding: 12px; border: 2px solid #f1f5f9; border-radius: 14px; margin-bottom: 8px; }
