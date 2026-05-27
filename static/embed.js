@@ -342,8 +342,11 @@
     .zt-fav-fab { position: fixed; left: 20px; bottom: 20px; width: 60px; height: 60px; background: linear-gradient(135deg, #ec4899, #e11d48); color: white; border: 0; border-radius: 50%; cursor: pointer; font-size: 28px; box-shadow: 0 8px 24px rgba(225,29,72,0.4); z-index: 9998; display: flex; align-items: center; justify-content: center; transition: transform 0.15s; }
     .zt-fav-fab:hover { transform: scale(1.1); }
     .zt-fav-fab-badge { position: absolute; top: -4px; right: -4px; background: white; color: #e11d48; border: 2px solid #e11d48; border-radius: 50%; width: 26px; height: 26px; font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
-    .zt-fav-panel { position: fixed; left: 0; top: 0; bottom: 0; width: 100%; max-width: 480px; background: white; box-shadow: 8px 0 32px rgba(0,0,0,0.2); z-index: 9999; overflow-y: auto; transform: translateX(-100%); transition: transform 0.3s; }
+    .zt-fav-panel { position: fixed; left: 0; top: 0; bottom: 0; width: 100%; max-width: 480px; background: white; box-shadow: 8px 0 32px rgba(0,0,0,0.2); z-index: 9999; transform: translateX(-100%); transition: transform 0.3s; display: flex; flex-direction: column; }
     .zt-fav-panel.zt-open { transform: translateX(0); }
+    .zt-fav-panel-header { padding: 14px 16px; border-bottom: 1px solid #e2e8f0; flex-shrink: 0; font-weight: 700; font-size: 18px; }
+    .zt-fav-panel-body { flex: 1; overflow-y: auto; padding: 12px; }
+    .zt-fav-panel-footer { padding: 10px 12px; border-top: 1px solid #e2e8f0; background: #f8fafc; flex-shrink: 0; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
     .zt-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9998; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
     .zt-overlay.zt-open { opacity: 1; pointer-events: auto; }
     .zt-fav-row { display: flex; gap: 12px; padding: 12px; border: 2px solid #f1f5f9; border-radius: 14px; margin-bottom: 8px; }
@@ -594,7 +597,10 @@
   function tplHotelPage() {
     var h = S.hotel;
     return `
-      <button class="zt-btn zt-btn-secondary" style="margin-bottom:14px;" data-action="backToSearch">${t('backToSearch')}</button>
+      <div class="zt-row" style="justify-content:space-between;margin-bottom:14px;gap:8px;flex-wrap:wrap;">
+        <button class="zt-btn zt-btn-secondary" data-action="backToSearch">${t('backToSearch')}</button>
+        <button class="zt-btn zt-btn-primary" data-action="reserveCheapest">${t('reserveTemp')}</button>
+      </div>
       ${h ? tplHotelHeader(h) : '<div class="zt-card" style="text-align:center;padding:40px;">'+t('loading')+'</div>'}
       ${h ? tplHotelGallery(h) : ''}
       ${h ? tplHotelRooms() : ''}
@@ -614,7 +620,6 @@
           <div class="zt-row" style="gap:6px;flex-wrap:wrap;">
             <button class="zt-btn zt-btn-secondary" data-action="toggleFavHotel">${isFavHotel() ? t('saved') : t('save')}</button>
             <button class="zt-btn zt-btn-secondary" data-action="shareLink">${t('copyLink')}</button>
-            <button class="zt-btn zt-btn-primary" data-action="reserveCheapest">${t('reserveTemp')}</button>
           </div>
         </div>
       </div>
@@ -728,30 +733,33 @@
     `;
   }
 
-  function tplFavoritesPanel() {
+  function tplFavoritesPanelBody() {
     if (!S.favorites.length) {
-      return '<div style="padding:50px 20px;text-align:center;"><div style="font-size:60px;">🤍</div><h3 style="margin:10px 0 4px;">Nicio favorită încă</h3><div style="color:#64748b;font-size:13px;">Apasă pe inima 🤍 de la orice tur ca să-l salvezi aici.</div></div>';
+      return '<div style="padding:50px 20px;text-align:center;"><div style="font-size:60px;">🤍</div><h3 style="margin:10px 0 4px;">'+t('favNone')+'</h3><div style="color:#64748b;font-size:13px;">'+t('favNoneSub')+'</div></div>';
+    }
+    var nW = LANG==='ru' ? 'н' : 'n';
+    return S.favorites.map(function(f){
+      return '<div class="zt-fav-row"><div class="zt-fav-img">'+
+        (f.default_photo ? '<img src="'+esc(f.default_photo)+'" loading="lazy" onerror="this.style.display=&quot;none&quot;">' : '')+
+        '</div><div style="flex:1;min-width:0;"><div style="font-weight:700;">'+esc(f.hotel_name)+' '+esc(f.star||'')+'</div>'+
+        '<div style="font-size:12px;color:#64748b;">📍 '+esc(f.city||'')+'</div>'+
+        '<div style="font-size:12px;margin-top:4px;">📅 '+formatDate(f.check_in)+' → '+formatDate(f.check_out)+' ('+(f.nights||'?')+nW+')</div>'+
+        '<div style="font-size:12px;color:#64748b;">🍽️ '+esc(mealHuman(f.meal))+' · '+esc(roomHuman(f.room_type))+'</div>'+
+        '<div class="zt-row" style="justify-content:space-between;margin-top:6px;flex-wrap:wrap;gap:4px;"><div style="font-size:18px;font-weight:800;color:#3a48d0;">'+formatMoney(f.brut_zebra||f.gross_amount)+'</div>'+
+        '<div class="zt-row" style="gap:4px;"><button class="zt-btn zt-btn-secondary" style="padding:4px 8px;font-size:11px;" data-action="copyFav" data-priceid="'+esc(f.price_id)+'">📋</button>'+
+        '<button class="zt-btn zt-btn-primary" style="padding:4px 10px;font-size:11px;" data-action="openHotel" data-hotel="'+esc(f.hotel_id)+'">'+t('details')+'</button>'+
+        '<button class="zt-btn" style="padding:4px 8px;font-size:11px;color:#dc2626;background:#fef2f2;" data-action="removeFav" data-priceid="'+esc(f.price_id)+'">×</button></div></div></div></div>';
+    }).join('');
+  }
+  function tplFavoritesFooter() {
+    if (!S.favorites.length) {
+      return '<button class="zt-btn zt-btn-secondary" style="width:100%;" data-action="favToggle">✕ '+(LANG==='ru'?'Закрыть':'Închide')+'</button>';
     }
     return `
-      <div style="padding:12px;background:#f8fafc;border-bottom:1px solid #e2e8f0;display:flex;flex-wrap:wrap;gap:6px;">
-        <button class="zt-btn zt-btn-brand" data-action="copyAllFavs">📋 Copiază toate</button>
-        <button class="zt-btn" style="background:#16a34a;color:white;" data-action="shareWhatsApp">💬 WhatsApp</button>
-        <button class="zt-btn zt-btn-secondary" style="margin-left:auto;color:#dc2626;" data-action="clearFavs">🗑️</button>
-      </div>
-      <div style="padding:12px;">
-        ${S.favorites.map(function(f){
-          return '<div class="zt-fav-row"><div class="zt-fav-img">'+
-            (f.default_photo ? '<img src="'+esc(f.default_photo)+'" loading="lazy" onerror="this.style.display=&quot;none&quot;">' : '')+
-            '</div><div style="flex:1;min-width:0;"><div style="font-weight:700;">'+esc(f.hotel_name)+' '+esc(f.star||'')+'</div>'+
-            '<div style="font-size:12px;color:#64748b;">📍 '+esc(f.city||'')+'</div>'+
-            '<div style="font-size:12px;margin-top:4px;">📅 '+formatDate(f.check_in)+' → '+formatDate(f.check_out)+' ('+(f.nights||'?')+'n)</div>'+
-            '<div style="font-size:12px;color:#64748b;">🍽️ '+esc(mealHuman(f.meal))+' · '+esc(roomHuman(f.room_type))+'</div>'+
-            '<div class="zt-row" style="justify-content:space-between;margin-top:6px;"><div style="font-size:18px;font-weight:800;color:#3a48d0;">'+formatMoney(f.brut_zebra||f.gross_amount)+'</div>'+
-            '<div class="zt-row" style="gap:4px;"><button class="zt-btn zt-btn-secondary" style="padding:4px 8px;font-size:11px;" data-action="copyFav" data-priceid="'+esc(f.price_id)+'">📋 Copiază</button>'+
-            '<button class="zt-btn zt-btn-primary" style="padding:4px 10px;font-size:11px;" data-action="openHotel" data-hotel="'+esc(f.hotel_id)+'">Vezi →</button>'+
-            '<button class="zt-btn" style="padding:4px 8px;font-size:11px;color:#dc2626;background:#fef2f2;" data-action="removeFav" data-priceid="'+esc(f.price_id)+'">×</button></div></div></div></div>';
-        }).join('')}
-      </div>
+      <button class="zt-btn zt-btn-brand" style="flex:1;min-width:130px;" data-action="copyAllFavs">${t('favCopyAll')}</button>
+      <button class="zt-btn" style="background:#16a34a;color:white;flex:1;min-width:130px;" data-action="shareWhatsApp">${t('favWhatsApp')}</button>
+      <button class="zt-btn zt-btn-secondary" style="padding:8px 10px;color:#dc2626;" data-action="clearFavs" title="${t('favClearAll')}">${t('favClearAll')}</button>
+      <button class="zt-btn zt-btn-secondary" style="padding:8px 14px;" data-action="favToggle">✕</button>
     `;
   }
 
@@ -1077,7 +1085,11 @@
     // FAB + favorites panel
     html += '<button class="zt-fav-fab" data-action="favToggle" aria-label="Favorite">❤️' + (S.favorites.length ? '<span class="zt-fav-fab-badge">'+S.favorites.length+'</span>' : '') + '</button>';
     html += '<div class="zt-overlay '+(S.favOpen?'zt-open':'')+'" data-action="favToggle"></div>';
-    html += '<div class="zt-fav-panel '+(S.favOpen?'zt-open':'')+'"><div style="padding:14px;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;"><h3 style="margin:0;font-size:20px;">'+t('favTitle')+'</h3><button class="zt-modal-close" data-action="favToggle">×</button></div>' + tplFavoritesPanel() + '</div>';
+    html += '<div class="zt-fav-panel '+(S.favOpen?'zt-open':'')+'">' +
+      '<div class="zt-fav-panel-header">'+t('favTitle')+' <span style="font-size:13px;color:#64748b;font-weight:400;margin-left:6px;">('+S.favorites.length+')</span></div>' +
+      '<div class="zt-fav-panel-body">'+tplFavoritesPanelBody()+'</div>' +
+      '<div class="zt-fav-panel-footer">'+tplFavoritesFooter()+'</div>' +
+      '</div>';
 
     // Reserve modal
     if (S.reserveOpen && S.reserveOffer) html += tplReserveModal(S.reserveOffer);
