@@ -194,22 +194,30 @@ def embed_js():
     return resp
 
 
+def _public_base_url() -> str:
+    """Return the public base URL with scheme guaranteed (defaults to https)."""
+    base = (config.PUBLIC_BASE_URL or request.host_url).rstrip("/")
+    if not base.startswith(("http://", "https://")):
+        base = "https://" + base
+    return base
+
+
 @app.route("/embed-config.js")
 def embed_config_js():
     """Configures the embed.js widget — sets the API base URL."""
-    base = config.PUBLIC_BASE_URL or request.host_url.rstrip("/")
+    base = _public_base_url()
     js = f"window.ZEBRA_TUR_API = '{base}';"
     return js, 200, {
         "Content-Type": "application/javascript; charset=utf-8",
         "Access-Control-Allow-Origin": "*",
+        "Cache-Control": "public, max-age=60",
     }
 
 
 @app.route("/widget.js")
 def widget_js():
     """JavaScript widget that embeds the B2C search on partner sites (e.g. zebratur.md/bulgaria)."""
-    # Determine base URL — prefer config value, else build from request
-    base = config.PUBLIC_BASE_URL or request.host_url.rstrip("/")
+    base = _public_base_url()
     js = f"""(function() {{
   var BASE = "{base}";
   var SRC_URL = BASE + "/turist?embed=1";
