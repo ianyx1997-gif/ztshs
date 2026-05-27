@@ -26,6 +26,117 @@
 
   var CONTAINER_ID = 'zebra-tur-widget';
 
+  // ============ I18N ============
+  var I18N = {
+    ro: {
+      heroTitle: 'Vacanța ta în Bulgaria începe aici',
+      heroSubtitle: 'Plajă, soare și hoteluri de top — la cele mai bune prețuri',
+      tripBus: 'Pachet cu autocar', tripBusDesc: 'Transport Chișinău ⇄ Bulgaria + cazare + asigurare + transfer',
+      tripSelf: 'Doar cazare', tripSelfDesc: 'Doar hotelul — transportul îl asiguri tu',
+      labelDates: '📅 Plecare în perioada', labelNights: '🌙 Nopți', labelTourists: '👥 Turiști',
+      labelMeal: '🍽️ Tip masă', labelStars: '⭐ Categorie hotel', labelResort: '📍 Stațiune', labelFacilities: '✨ Facilități',
+      adults: 'Adulți', adultsHint: '12+ ani', children: 'Copii', childrenHint: '0-12 ani',
+      childAge: 'Vârsta copilului', years: 'ani', done: 'Gata',
+      allResorts: 'Toate stațiunile din Bulgaria',
+      searching: 'Se caută cele mai bune oferte...', search: '🔍 Caută vacanța mea',
+      offersFound: 'oferte găsite', offerFound: 'ofertă găsită', noOffers: '🔍 Nu am găsit oferte. Modifică filtrele și încearcă din nou.',
+      sortAsc: '💰 Preț crescător', sortDesc: '💎 Preț descrescător', sortStars: '⭐ Stele',
+      forPax: 'pentru',
+      mealBreakfast: '☕ Mic dejun', mealHB: '🥐 Demi-pensiune', mealFB: '🍴 Full Board', mealAI: '🍽️ All Inclusive', mealUltra: '🍾 Ultra All',
+      facFirstLine: '🏖️ Prima linie', facPool: '🏊 Piscină', facAqua: '💦 Aquapark', facBeach: '⛱️ Plajă', facAdult: '🔞 Adult Only', facWifi: '📶 Wi-Fi', facParking: '🅿️ Parcare',
+      details: 'Vezi →',
+      backToSearch: '← Înapoi la căutare',
+      save: '🤍 Salvează', saved: '❤️ Salvat', copyLink: '🔗 Copiază link', reserveTemp: '⚡ Rezervare temporară',
+      roomsTitle: '🛏️ Camere și prețuri disponibile',
+      roomCol: 'Cameră / Masă',
+      tapPrice: 'Apasă pe preț pentru rezervare temporară. Prețurile sunt pentru',
+      reserve: 'Rezervă temporar',
+      loading: '⏳ Se încarcă...',
+      aboutHotel: '📝 Despre hotel', mapLocation: '📍 Pe hartă',
+      reserveTitle: '🎉 Rezervare temporară',
+      reserveDesc: 'Un agent te va contacta în maxim 2 ore.',
+      yourName: 'Numele tău complet', phone: 'Telefon', phonePh: '+373 69 ...',
+      msgAgent: 'Mesaj pentru agent (opțional)', msgPh: 'ex: cameră cu vedere la mare',
+      cancel: 'Anulează', sendReserve: '✅ Trimite rezervarea temporară', sending: 'Se trimite...',
+      missingFields: 'Completează numele și telefonul',
+      reserveSent: '🎉 Rezervare trimisă! #',
+      favTitle: '❤️ Favoritele mele', favNone: 'Nicio favorită încă', favNoneSub: 'Apasă pe inima 🤍 de la orice tur ca să-l salvezi aici.',
+      favCopyAll: '📋 Copiază toate', favWhatsApp: '💬 WhatsApp', favClearAll: '🗑️',
+      favConfirmClear: 'Ștergi toate favoritele?',
+      favSaved: '❤️ Salvat la favorite!', favRemoved: '💔 Eliminat din favorite',
+      copied: '✅ Copiat!', linkCopied: '🔗 Link copiat!',
+      noRoomsAvailable: 'Nu sunt camere disponibile pentru rezervare',
+      ztOffers: 'oferte', contact: 'Contact',
+      // Months for date formatting
+      // (we use ISO dates, native input handles display)
+    },
+    ru: {
+      heroTitle: 'Ваш отдых в Болгарии начинается здесь',
+      heroSubtitle: 'Пляж, солнце и лучшие отели — по лучшим ценам',
+      tripBus: 'Пакет с автобусом', tripBusDesc: 'Транспорт Кишинев ⇄ Болгария + проживание + страховка + трансфер',
+      tripSelf: 'Только проживание', tripSelfDesc: 'Только отель — транспорт ваш',
+      labelDates: '📅 Период вылета', labelNights: '🌙 Ночи', labelTourists: '👥 Туристы',
+      labelMeal: '🍽️ Тип питания', labelStars: '⭐ Категория отеля', labelResort: '📍 Курорт', labelFacilities: '✨ Удобства',
+      adults: 'Взрослые', adultsHint: '12+ лет', children: 'Дети', childrenHint: '0-12 лет',
+      childAge: 'Возраст ребёнка', years: 'лет', done: 'Готово',
+      allResorts: 'Все курорты Болгарии',
+      searching: 'Ищем лучшие предложения...', search: '🔍 Найти отдых',
+      offersFound: 'предложений найдено', offerFound: 'предложение найдено', noOffers: '🔍 Предложений не найдено. Измените фильтры и попробуйте снова.',
+      sortAsc: '💰 Цена по возрастанию', sortDesc: '💎 Цена по убыванию', sortStars: '⭐ Звёзды',
+      forPax: 'для',
+      mealBreakfast: '☕ Завтрак', mealHB: '🥐 Полупансион', mealFB: '🍴 Полный пансион', mealAI: '🍽️ Всё включено', mealUltra: '🍾 Ультра всё включено',
+      facFirstLine: '🏖️ Первая линия', facPool: '🏊 Бассейн', facAqua: '💦 Аквапарк', facBeach: '⛱️ Пляж', facAdult: '🔞 Adult Only', facWifi: '📶 Wi-Fi', facParking: '🅿️ Парковка',
+      details: 'Подробнее →',
+      backToSearch: '← Назад к поиску',
+      save: '🤍 Сохранить', saved: '❤️ Сохранено', copyLink: '🔗 Копировать ссылку', reserveTemp: '⚡ Предварительное бронирование',
+      roomsTitle: '🛏️ Доступные номера и цены',
+      roomCol: 'Номер / Питание',
+      tapPrice: 'Нажмите на цену для предварительного бронирования. Цены указаны для',
+      reserve: 'Забронировать',
+      loading: '⏳ Загрузка...',
+      aboutHotel: '📝 Об отеле', mapLocation: '📍 На карте',
+      reserveTitle: '🎉 Предварительное бронирование',
+      reserveDesc: 'Агент свяжется с вами в течение 2 часов.',
+      yourName: 'Ваше полное имя', phone: 'Телефон', phonePh: '+373 69 ...',
+      msgAgent: 'Сообщение агенту (необязательно)', msgPh: 'например: номер с видом на море',
+      cancel: 'Отмена', sendReserve: '✅ Отправить заявку', sending: 'Отправка...',
+      missingFields: 'Заполните имя и телефон',
+      reserveSent: '🎉 Заявка отправлена! №',
+      favTitle: '❤️ Избранное', favNone: 'Пока нет избранных', favNoneSub: 'Нажмите на сердечко 🤍 у любого тура, чтобы сохранить здесь.',
+      favCopyAll: '📋 Скопировать все', favWhatsApp: '💬 WhatsApp', favClearAll: '🗑️',
+      favConfirmClear: 'Удалить все избранные?',
+      favSaved: '❤️ Добавлено в избранное!', favRemoved: '💔 Удалено из избранного',
+      copied: '✅ Скопировано!', linkCopied: '🔗 Ссылка скопирована!',
+      noRoomsAvailable: 'Нет доступных номеров для бронирования',
+      ztOffers: 'предложений', contact: 'Контакт',
+    }
+  };
+
+  // Detect language: query param, data attribute, URL path, or default
+  function detectLang() {
+    try {
+      // 1. ?lang=ru in current URL
+      var sp = new URLSearchParams(location.search);
+      if (sp.get('lang') && I18N[sp.get('lang')]) return sp.get('lang');
+      // 2. data-lang on container
+      var c = document.getElementById(CONTAINER_ID);
+      if (c && c.dataset && c.dataset.lang && I18N[c.dataset.lang]) return c.dataset.lang;
+      // 3. window.ZEBRA_TUR_LANG global
+      if (window.ZEBRA_TUR_LANG && I18N[window.ZEBRA_TUR_LANG]) return window.ZEBRA_TUR_LANG;
+      // 4. URL path contains /ru/ or /ru$
+      if (/\/ru(\/|$)/.test(location.pathname)) return 'ru';
+      // 5. <html lang="ru">
+      var hl = (document.documentElement.lang || '').toLowerCase();
+      if (hl.indexOf('ru') === 0) return 'ru';
+    } catch (e) {}
+    return 'ro';
+  }
+  var LANG = detectLang();
+  function t(key) {
+    var dict = I18N[LANG] || I18N.ro;
+    return dict[key] || I18N.ro[key] || key;
+  }
+
   // ============ STATE ============
   var S = {
     cities: [], packages: [], facilities: [],
@@ -51,14 +162,28 @@
   function formatMoneyShort(n) { if (n==null) return '—'; return Math.round(n) + '€'; }
   function formatDate(s) { if (!s) return '—'; try { var p = s.split('-'); return p[2]+'.'+p[1]+'.'+p[0]; } catch(e) { return s; } }
   function formatDateShort(s) { if (!s) return '—'; try { var p = s.split('-'); return p[2]+'.'+p[1]; } catch(e) { return s; } }
-  function dayShort(s) { if(!s) return ''; try { return ['Du','Lu','Ma','Mi','Jo','Vi','Sâ'][new Date(s).getDay()]; } catch(e) { return ''; } }
+  function dayShort(s) { return dayShortLang(s); }
   function mealHuman(m) {
+    if (!m) return '—';
+    if (LANG === 'ru') {
+      var ruMap = {'ALL INCLUSIVE':'🍽️ Всё включено','AI':'🍽️ Всё включено','ULTRA ALL':'🍾 Ультра всё включено',
+        'PREMIUM ALL':'💎 Премиум всё включено','AI LIGHT':'🍽️ All Light','ALL LIGHT':'🍽️ All Light',
+        'BB':'☕ Завтрак','BED AND BREAKFAST':'☕ Завтрак',
+        'HB':'🥐 Полупансион','HALF BOARD':'🥐 Полупансион',
+        'FB':'🍴 Полный пансион','FULL BOARD':'🍴 Полный пансион',
+        'RO':'🛏️ Только проживание','ROOM ONLY':'🛏️ Только проживание'};
+      return ruMap[m] || m;
+    }
     var map = {'ALL INCLUSIVE':'🍽️ All Inclusive','AI':'🍽️ All Inclusive','ULTRA ALL':'🍾 Ultra All Inclusive',
       'PREMIUM ALL':'💎 Premium All','AI LIGHT':'🍽️ All Light','ALL LIGHT':'🍽️ All Light',
       'BB':'☕ Mic dejun','HB':'🥐 HB','FB':'🍴 FB','RO':'🛏️ Doar cazare'};
-    return map[m] || m || '—';
+    return map[m] || m;
   }
-  function roomHuman(r) { if(!r) return '—'; return r.replace(/DBL\b/gi,'Dublă').replace(/SGL\b/gi,'Single').replace(/TPL\b/gi,'Triplă'); }
+  function roomHuman(r) {
+    if (!r) return '—';
+    if (LANG === 'ru') return r.replace(/DBL\b/gi,'Двухместный').replace(/SGL\b/gi,'Одноместный').replace(/TPL\b/gi,'Трёхместный').replace(/STUDIO/gi,'Студия');
+    return r.replace(/DBL\b/gi,'Dublă').replace(/SGL\b/gi,'Single').replace(/TPL\b/gi,'Triplă');
+  }
   function cityHuman(s) { if(!s) return ''; return s.split(' ').map(function(w){return w.charAt(0)+w.slice(1).toLowerCase();}).join(' '); }
   function esc(s) { if(s==null) return ''; return String(s).replace(/[&<>"']/g, function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
   function loadFavs() { try { return JSON.parse(localStorage.getItem('zt-favorites') || '[]'); } catch(e) { return []; } }
@@ -288,26 +413,27 @@
 
   // ============ TEMPLATES ============
   function tplSearchPage() {
+    var nightsWord = LANG === 'ru' ? ' ночей' : ' nopți';
     return `
       <div class="zt-hero">
-        <h1>Vacanța ta în Bulgaria începe aici</h1>
-        <p>Plajă, soare și hoteluri de top — la cele mai bune prețuri</p>
+        <h1>${t('heroTitle')}</h1>
+        <p>${t('heroSubtitle')}</p>
       </div>
       <div class="zt-card" style="margin-bottom:16px;">
         <div class="zt-radio-grid">
           <button class="zt-radio-card ${S.filters.tripType==='bus'?'zt-radio-card-active':''}" data-action="trip" data-value="bus">
             <div class="zt-trip-icon">🚌</div>
-            <div><div class="zt-trip-title">Pachet cu autocar ${S.filters.tripType==='bus'?'<span style="color:#3a48d0">✓</span>':''}</div><div class="zt-trip-desc">Transport Chișinău ⇄ Bulgaria + cazare + asigurare + transfer</div></div>
+            <div><div class="zt-trip-title">${t('tripBus')} ${S.filters.tripType==='bus'?'<span style="color:#3a48d0">✓</span>':''}</div><div class="zt-trip-desc">${t('tripBusDesc')}</div></div>
           </button>
           <button class="zt-radio-card ${S.filters.tripType==='self'?'zt-radio-card-active':''}" data-action="trip" data-value="self">
             <div class="zt-trip-icon">🚗</div>
-            <div><div class="zt-trip-title">Doar cazare ${S.filters.tripType==='self'?'<span style="color:#3a48d0">✓</span>':''}</div><div class="zt-trip-desc">Doar hotelul — transportul îl asiguri tu</div></div>
+            <div><div class="zt-trip-title">${t('tripSelf')} ${S.filters.tripType==='self'?'<span style="color:#3a48d0">✓</span>':''}</div><div class="zt-trip-desc">${t('tripSelfDesc')}</div></div>
           </button>
         </div>
 
         <div class="zt-search-form">
           <div class="zt-cell-dates">
-            <label class="zt-label">📅 Plecare în perioada</label>
+            <label class="zt-label">${t('labelDates')}</label>
             <div class="zt-date-grid">
               <input type="date" class="zt-input" data-action="filter" data-key="dateFrom" value="${esc(S.filters.dateFrom)}">
               <input type="date" class="zt-input" data-action="filter" data-key="dateTo" value="${esc(S.filters.dateTo)}">
@@ -315,15 +441,15 @@
           </div>
           <div class="zt-dual-grid">
             <div>
-              <label class="zt-label">🌙 Nopți</label>
+              <label class="zt-label">${t('labelNights')}</label>
               <select class="zt-select" data-action="filter" data-key="nights">
                 ${[1,2,3,4,5,6,7,8,9,10,11,12,13,14].map(function(n){
-                  return '<option value="'+n+'"'+(S.filters.nights===n?' selected':'')+'>'+n+' nopți</option>';
+                  return '<option value="'+n+'"'+(S.filters.nights===n?' selected':'')+'>'+n+nightsWord+'</option>';
                 }).join('')}
               </select>
             </div>
             <div style="position:relative;">
-              <label class="zt-label">👥 Turiști</label>
+              <label class="zt-label">${t('labelTourists')}</label>
               <button class="zt-select" style="text-align:left;cursor:pointer;" data-action="paxToggle">
                 ${paxLabel()} <span style="float:right;color:#94a3b8;">▾</span>
               </button>
@@ -334,16 +460,16 @@
 
         <div style="border-top:1px solid #f1f5f9;padding-top:14px;">
           <div style="margin-bottom:12px;">
-            <div class="zt-label">🍽️ Tip masă</div>
+            <div class="zt-label">${t('labelMeal')}</div>
             <div class="zt-row" style="gap:6px;">
-              ${[{id:7,l:'☕ Mic dejun'},{id:8,l:'🥐 Demi-pensiune'},{id:13,l:'🍴 Full Board'},{id:6,l:'🍽️ All Inclusive'},{id:20,l:'🍾 Ultra All'}].map(function(m){
+              ${[{id:7,l:t('mealBreakfast')},{id:8,l:t('mealHB')},{id:13,l:t('mealFB')},{id:6,l:t('mealAI')},{id:20,l:t('mealUltra')}].map(function(m){
                 var on = S.filters.mealIds.indexOf(m.id) >= 0;
                 return '<button class="zt-chip '+(on?'zt-chip-meal-active':'')+'" data-action="meal" data-value="'+m.id+'">'+m.l+'</button>';
               }).join('')}
             </div>
           </div>
           <div style="margin-bottom:12px;">
-            <div class="zt-label">⭐ Categorie hotel</div>
+            <div class="zt-label">${t('labelStars')}</div>
             <div class="zt-row" style="gap:6px;">
               ${[{id:7,l:'⭐⭐⭐',w:true},{id:5,l:'⭐⭐⭐⭐'},{id:6,l:'⭐⭐⭐⭐⭐'}].map(function(s){
                 var on = S.filters.starIds.indexOf(s.id) >= 0;
@@ -353,16 +479,16 @@
             </div>
           </div>
           <div style="margin-bottom:12px;">
-            <div class="zt-label">📍 Stațiune</div>
+            <div class="zt-label">${t('labelResort')}</div>
             <select class="zt-select" style="max-width:400px;" data-action="filter" data-key="cityId">
-              <option value="">Toate stațiunile din Bulgaria</option>
+              <option value="">${t('allResorts')}</option>
               ${S.cities.map(function(c){ return '<option value="'+c.id+'"'+(String(S.filters.cityId)===String(c.id)?' selected':'')+'>'+esc(c.name)+'</option>'; }).join('')}
             </select>
           </div>
           <div style="margin-bottom:14px;">
-            <div class="zt-label">✨ Facilități</div>
+            <div class="zt-label">${t('labelFacilities')}</div>
             <div class="zt-row" style="gap:6px;">
-              ${[{id:39,l:'🏖️ Prima linie'},{id:21,l:'🏊 Piscină'},{id:33,l:'💦 Aquapark'},{id:8,l:'⛱️ Plajă'},{id:41,l:'🔞 Adult Only'},{id:24,l:'📶 Wi-Fi'},{id:27,l:'🅿️ Parcare'}].map(function(f){
+              ${[{id:39,l:t('facFirstLine')},{id:21,l:t('facPool')},{id:33,l:t('facAqua')},{id:8,l:t('facBeach')},{id:41,l:t('facAdult')},{id:24,l:t('facWifi')},{id:27,l:t('facParking')}].map(function(f){
                 var on = S.filters.facilityIds.indexOf(f.id) >= 0;
                 return '<button class="zt-chip '+(on?'zt-chip-fac-active':'')+'" data-action="fac" data-value="'+f.id+'">'+f.l+'</button>';
               }).join('')}
@@ -371,7 +497,7 @@
         </div>
 
         <button class="zt-btn zt-btn-primary" style="width:100%;padding:14px;font-size:16px;" data-action="search">
-          ${S.loading ? '<span class="zt-spinner">⏳</span> Se caută cele mai bune oferte...' : '🔍 Caută vacanța mea'}
+          ${S.loading ? '<span class="zt-spinner">⏳</span> ' + t('searching') : t('search')}
         </button>
       </div>
 
@@ -383,7 +509,7 @@
     return `
       <div class="zt-pax-panel" style="position:absolute;right:0;top:100%;margin-top:6px;background:white;border:2px solid #e2e8f0;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.12);padding:14px;z-index:10;width:280px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-          <div><div style="font-weight:600;">Adulți</div><div style="font-size:11px;color:#64748b;">12+ ani</div></div>
+          <div><div style="font-weight:600;">${t('adults')}</div><div style="font-size:11px;color:#64748b;">${t('adultsHint')}</div></div>
           <div class="zt-row" style="gap:6px;">
             <button class="zt-chip" data-action="adults" data-value="-1" style="width:32px;height:32px;padding:0;border-radius:50%;border-color:#3a48d0;color:#3a48d0;">−</button>
             <span style="width:24px;text-align:center;font-weight:700;">${S.filters.adults}</span>
@@ -391,7 +517,7 @@
           </div>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-          <div><div style="font-weight:600;">Copii</div><div style="font-size:11px;color:#64748b;">0-12 ani</div></div>
+          <div><div style="font-weight:600;">${t('children')}</div><div style="font-size:11px;color:#64748b;">${t('childrenHint')}</div></div>
           <div class="zt-row" style="gap:6px;">
             <button class="zt-chip" data-action="child" data-value="-1" style="width:32px;height:32px;padding:0;border-radius:50%;border-color:#3a48d0;color:#3a48d0;">−</button>
             <span style="width:24px;text-align:center;font-weight:700;">${S.filters.children.length}</span>
@@ -399,9 +525,9 @@
           </div>
         </div>
         ${S.filters.children.map(function(age, i){
-          return '<div style="display:flex;justify-content:space-between;margin-bottom:6px;align-items:center;"><span style="font-size:13px;">Vârsta copilului '+(i+1)+'</span><select class="zt-select" style="width:90px;" data-action="childage" data-idx="'+i+'">'+[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17].map(function(a){return '<option value="'+a+'"'+(age===a?' selected':'')+'>'+a+' ani</option>';}).join('')+'</select></div>';
+          return '<div style="display:flex;justify-content:space-between;margin-bottom:6px;align-items:center;"><span style="font-size:13px;">'+t('childAge')+' '+(i+1)+'</span><select class="zt-select" style="width:90px;" data-action="childage" data-idx="'+i+'">'+[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17].map(function(a){return '<option value="'+a+'"'+(age===a?' selected':'')+'>'+a+' '+t('years')+'</option>';}).join('')+'</select></div>';
         }).join('')}
-        <button class="zt-btn zt-btn-brand" style="width:100%;margin-top:6px;" data-action="paxClose">Gata</button>
+        <button class="zt-btn zt-btn-brand" style="width:100%;margin-top:6px;" data-action="paxClose">${t('done')}</button>
       </div>
     `;
   }
@@ -417,15 +543,16 @@
       return 0;
     });
     if (!prices.length) {
-      return '<div class="zt-card" style="text-align:center;padding:40px;color:#64748b;">🔍 Nu am găsit oferte. Modifică filtrele și încearcă din nou.</div>';
+      return '<div class="zt-card" style="text-align:center;padding:40px;color:#64748b;">' + t('noOffers') + '</div>';
     }
+    var label = prices.length === 1 ? t('offerFound') : t('offersFound');
     return `
       <div class="zt-row" style="justify-content:space-between;margin-bottom:12px;">
-        <h2 style="margin:0;font-size:20px;font-weight:700;">${prices.length} oferte găsite</h2>
+        <h2 style="margin:0;font-size:20px;font-weight:700;">${prices.length} ${label}</h2>
         <select class="zt-select" style="width:auto;" data-action="sort">
-          <option value="price_asc"${S.sortBy==='price_asc'?' selected':''}>💰 Preț crescător</option>
-          <option value="price_desc"${S.sortBy==='price_desc'?' selected':''}>💎 Preț descrescător</option>
-          <option value="star_desc"${S.sortBy==='star_desc'?' selected':''}>⭐ Stele</option>
+          <option value="price_asc"${S.sortBy==='price_asc'?' selected':''}>${t('sortAsc')}</option>
+          <option value="price_desc"${S.sortBy==='price_desc'?' selected':''}>${t('sortDesc')}</option>
+          <option value="star_desc"${S.sortBy==='star_desc'?' selected':''}>${t('sortStars')}</option>
         </select>
       </div>
       <div class="zt-results-grid">
@@ -450,14 +577,14 @@
           <div class="zt-hotel-meta">📍 ${esc(o.city || 'Bulgaria')}</div>
           <div class="zt-hotel-meta">
             <div class="zt-hotel-meta-row">📅 ${formatDate(o.check_in)} → ${formatDate(o.check_out)}</div>
-            <div class="zt-hotel-meta-row">🌙 ${o.nights} nopți · 🍽️ ${esc(mealHuman(o.meal))}</div>
+            <div class="zt-hotel-meta-row">🌙 ${o.nights} ${LANG==='ru'?'ночей':'nopți'} · 🍽️ ${esc(mealHuman(o.meal))}</div>
           </div>
           <div class="zt-hotel-footer">
             <div>
               <div class="zt-price-pax">${paxLabel(true)}</div>
               <div class="zt-price">${formatMoney(o.brut_zebra || o.gross_amount)}</div>
             </div>
-            <button class="zt-btn zt-btn-primary" data-action="openHotel" data-hotel="${esc(o.hotel_id)}" data-priceid="${esc(o.price_id)}" data-stop="1" style="padding:6px 12px;font-size:13px;">Vezi →</button>
+            <button class="zt-btn zt-btn-primary" data-action="openHotel" data-hotel="${esc(o.hotel_id)}" data-priceid="${esc(o.price_id)}" data-stop="1" style="padding:6px 12px;font-size:13px;">${t('details')}</button>
           </div>
         </div>
       </div>
@@ -467,12 +594,12 @@
   function tplHotelPage() {
     var h = S.hotel;
     return `
-      <button class="zt-btn zt-btn-secondary" style="margin-bottom:14px;" data-action="backToSearch">← Înapoi la căutare</button>
-      ${h ? tplHotelHeader(h) : '<div class="zt-card" style="text-align:center;padding:40px;">⏳ Se încarcă...</div>'}
+      <button class="zt-btn zt-btn-secondary" style="margin-bottom:14px;" data-action="backToSearch">${t('backToSearch')}</button>
+      ${h ? tplHotelHeader(h) : '<div class="zt-card" style="text-align:center;padding:40px;">'+t('loading')+'</div>'}
       ${h ? tplHotelGallery(h) : ''}
       ${h ? tplHotelRooms() : ''}
-      ${h && h.description ? '<div class="zt-card" style="margin-top:16px;"><h2 style="margin:0 0 12px;font-size:18px;">📝 Despre hotel</h2><div style="font-size:14px;line-height:1.6;">' + h.description + '</div></div>' : ''}
-      ${h && h.map_frame ? '<div class="zt-card" style="margin-top:16px;"><h2 style="margin:0 0 12px;font-size:18px;">📍 Pe hartă</h2><div style="border-radius:10px;overflow:hidden;">' + h.map_frame + '</div></div>' : ''}
+      ${h && h.description ? '<div class="zt-card" style="margin-top:16px;"><h2 style="margin:0 0 12px;font-size:18px;">'+t('aboutHotel')+'</h2><div style="font-size:14px;line-height:1.6;">' + h.description + '</div></div>' : ''}
+      ${h && h.map_frame ? '<div class="zt-card" style="margin-top:16px;"><h2 style="margin:0 0 12px;font-size:18px;">'+t('mapLocation')+'</h2><div style="border-radius:10px;overflow:hidden;">' + h.map_frame + '</div></div>' : ''}
     `;
   }
 
@@ -485,9 +612,9 @@
             <div style="color:#64748b;font-size:14px;margin-top:4px;">📍 ${esc(h.city || '')}, ${esc(h.country || 'Bulgaria')}</div>
           </div>
           <div class="zt-row" style="gap:6px;flex-wrap:wrap;">
-            <button class="zt-btn zt-btn-secondary" data-action="toggleFavHotel">${isFavHotel() ? '❤️ Salvat' : '🤍 Salvează'}</button>
-            <button class="zt-btn zt-btn-secondary" data-action="shareLink">🔗 Copiază link</button>
-            <button class="zt-btn zt-btn-primary" data-action="reserveCheapest">⚡ Rezervare temporară</button>
+            <button class="zt-btn zt-btn-secondary" data-action="toggleFavHotel">${isFavHotel() ? t('saved') : t('save')}</button>
+            <button class="zt-btn zt-btn-secondary" data-action="shareLink">${t('copyLink')}</button>
+            <button class="zt-btn zt-btn-primary" data-action="reserveCheapest">${t('reserveTemp')}</button>
           </div>
         </div>
       </div>
@@ -517,7 +644,7 @@
 
   function tplHotelRooms() {
     if (!S.hotelRooms.length) {
-      return '<div class="zt-card" style="text-align:center;padding:30px;color:#64748b;">⏳ Se încarcă camerele...</div>';
+      return '<div class="zt-card" style="text-align:center;padding:30px;color:#64748b;">'+t('loading')+'</div>';
     }
     // Pivot: rooms × dates
     var datesSet = {};
@@ -538,11 +665,11 @@
     });
     return `
       <div class="zt-card" style="margin-bottom:14px;">
-        <h2 style="margin:0 0 12px;font-size:18px;">🛏️ Camere și prețuri disponibile</h2>
+        <h2 style="margin:0 0 12px;font-size:18px;">${t('roomsTitle')}</h2>
         <div style="overflow-x:auto;">
           <table class="zt-matrix">
             <thead><tr>
-              <th>Cameră / Masă</th>
+              <th>${t('roomCol')}</th>
               ${dates.map(function(d){ return '<th class="zt-matrix-date"><div class="zt-matrix-date-day">'+dayShort(d)+'</div>'+formatDateShort(d)+'</th>'; }).join('')}
             </tr></thead>
             <tbody>
@@ -551,49 +678,50 @@
                   dates.map(function(d){
                     var p = g.prices[d];
                     if (!p) return '<td><div class="zt-empty-cell">—</div></td>';
-                    return '<td><button class="zt-matrix-price" data-action="reserve" data-priceid="'+esc(p.price_id)+'">'+formatMoneyShort(p.brut_zebra||p.gross_amount)+'<span class="zt-matrix-price-rezerva">Rezervă temporar</span></button></td>';
+                    return '<td><button class="zt-matrix-price" data-action="reserve" data-priceid="'+esc(p.price_id)+'">'+formatMoneyShort(p.brut_zebra||p.gross_amount)+'<span class="zt-matrix-price-rezerva">'+t('reserve')+'</span></button></td>';
                   }).join('') +
                   '</tr>';
               }).join('')}
             </tbody>
           </table>
         </div>
-        <div style="font-size:11px;color:#94a3b8;margin-top:8px;">Apasă pe preț pentru rezervare temporară. Prețurile sunt pentru ${paxLabel(true)}.</div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:8px;">${t('tapPrice')} ${paxLabel(true)}.</div>
       </div>
     `;
   }
 
   function tplReserveModal(offer) {
+    var nightsW = LANG==='ru' ? 'ночей' : 'nopți';
     return `
       <div class="zt-modal" data-action="closeReserve">
         <div class="zt-modal-body" style="max-width:560px;" onclick="event.stopPropagation()">
           <div class="zt-modal-header">
-            <div><h3 style="margin:0;font-size:22px;font-weight:800;">🎉 Rezervare temporară</h3><div style="font-size:13px;color:#64748b;margin-top:4px;">Un agent te va contacta în maxim 2 ore.</div></div>
+            <div><h3 style="margin:0;font-size:22px;font-weight:800;">${t('reserveTitle')}</h3><div style="font-size:13px;color:#64748b;margin-top:4px;">${t('reserveDesc')}</div></div>
             <button class="zt-modal-close" data-action="closeReserve">×</button>
           </div>
           <div style="padding:20px;">
             <div style="background:#eef2ff;padding:12px 14px;border-radius:10px;margin-bottom:16px;font-size:14px;">
               <div style="font-weight:700;color:#3a48d0;">${esc(offer.hotel_name || (S.hotel && S.hotel.hotel_name) || '')} <span style="color:#d97706;">${esc(offer.star || (S.hotel && S.hotel.star) || '')}</span></div>
               <div>📍 ${esc(offer.city || (S.hotel && S.hotel.city) || 'Bulgaria')} · ${esc(mealHuman(offer.meal))}</div>
-              <div>📅 ${formatDate(offer.check_in)} → ${formatDate(offer.check_out)} (${offer.nights} nopți)</div>
+              <div>📅 ${formatDate(offer.check_in)} → ${formatDate(offer.check_out)} (${offer.nights} ${nightsW})</div>
               <div style="font-size:20px;font-weight:800;color:#3a48d0;margin-top:6px;">${formatMoney(offer.brut_zebra||offer.gross_amount)}</div>
             </div>
             <div style="margin-bottom:12px;">
-              <label class="zt-label">Numele tău complet *</label>
-              <input id="zt-resv-name" type="text" class="zt-input" placeholder="ex: Ion Popescu">
+              <label class="zt-label">${t('yourName')} *</label>
+              <input id="zt-resv-name" type="text" class="zt-input" placeholder="${LANG==='ru'?'например: Иван Иванов':'ex: Ion Popescu'}">
             </div>
             <div style="margin-bottom:12px;">
-              <label class="zt-label">Telefon *</label>
-              <input id="zt-resv-phone" type="tel" class="zt-input" placeholder="+373 69 ...">
+              <label class="zt-label">${t('phone')} *</label>
+              <input id="zt-resv-phone" type="tel" class="zt-input" placeholder="${t('phonePh')}">
             </div>
             <div style="margin-bottom:12px;">
-              <label class="zt-label">Mesaj pentru agent (opțional)</label>
-              <textarea id="zt-resv-notes" class="zt-input" rows="3" placeholder="ex: cameră cu vedere la mare"></textarea>
+              <label class="zt-label">${t('msgAgent')}</label>
+              <textarea id="zt-resv-notes" class="zt-input" rows="3" placeholder="${t('msgPh')}"></textarea>
             </div>
           </div>
           <div class="zt-modal-footer">
-            <button class="zt-btn zt-btn-secondary" data-action="closeReserve">Anulează</button>
-            <button class="zt-btn zt-btn-primary" data-action="submitReserve">✅ Trimite rezervarea temporară</button>
+            <button class="zt-btn zt-btn-secondary" data-action="closeReserve">${t('cancel')}</button>
+            <button class="zt-btn zt-btn-primary" data-action="submitReserve">${t('sendReserve')}</button>
           </div>
         </div>
       </div>
@@ -629,7 +757,20 @@
 
   function paxLabel(short) {
     var a = S.filters.adults, c = S.filters.children.length;
+    if (LANG === 'ru') {
+      var adultsW = a === 1 ? 'взрослый' : 'взрослых';
+      var childW = c === 1 ? 'ребёнок' : 'детей';
+      return a + ' ' + adultsW + (c ? (short ? ', ' : ' + ') + c + ' ' + childW : '');
+    }
     return a + ' adult' + (a===1?'':'i') + (c ? (short?', ':' + ') + c + ' copil' + (c===1?'':'i') : '');
+  }
+  function dayShortLang(s) {
+    if (!s) return '';
+    try {
+      var d = new Date(s);
+      if (LANG === 'ru') return ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'][d.getDay()];
+      return ['Du','Lu','Ma','Mi','Jo','Vi','Sâ'][d.getDay()];
+    } catch(e) { return ''; }
   }
 
   // ============ ACTIONS ============
@@ -761,7 +902,7 @@
     var i = S.favorites.findIndex(function(f){ return f.price_id === offer.price_id; });
     if (i >= 0) {
       S.favorites.splice(i, 1);
-      toast('💔 Eliminat din favorite');
+      toast(t('favRemoved'));
     } else {
       S.favorites.unshift({
         price_id: offer.price_id, hotel_id: offer.hotel_id, hotel_name: offer.hotel_name,
@@ -772,7 +913,7 @@
         url: location.origin + location.pathname + '#zt:h=' + offer.hotel_id + '&in=' + S.filters.dateFrom + '&out=' + S.filters.dateTo + '&n=' + S.filters.nights + '&a=' + S.filters.adults + '&t=' + S.filters.tripType,
         saved_at: new Date().toISOString(),
       });
-      toast('❤️ Salvat la favorite!');
+      toast(t('favSaved'));
     }
     saveFavs(); render();
   }
@@ -795,7 +936,7 @@
     var name = (document.getElementById('zt-resv-name')||{}).value;
     var phone = (document.getElementById('zt-resv-phone')||{}).value;
     var notes = (document.getElementById('zt-resv-notes')||{}).value;
-    if (!name || !phone) { toast('Completează numele și telefonul', 'error'); return; }
+    if (!name || !phone) { toast(t('missingFields'), 'error'); return; }
     try {
       var r = await api('/api/turist/reserve', {
         customer_name: name, customer_phone: phone, notes: notes,
@@ -804,7 +945,7 @@
       });
       if (r && r.error) throw new Error(r.error);
       S.reserveOpen = false; render();
-      toast('🎉 Rezervare trimisă! #' + r.quote_id, 'success');
+      toast(t('reserveSent') + r.quote_id, 'success');
     } catch (e) {
       toast('Eroare: ' + e.message, 'error');
     }
@@ -823,12 +964,12 @@
   }
   function copyToClipboard(text) {
     try {
-      navigator.clipboard.writeText(text).then(function(){ toast('✅ Copiat!', 'success'); });
+      navigator.clipboard.writeText(text).then(function(){ toast(t('copied'), 'success'); });
     } catch (e) {
       var ta = document.createElement('textarea');
       ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
       document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
-      toast('✅ Copiat!', 'success');
+      toast(t('copied'), 'success');
     }
   }
 
@@ -861,7 +1002,7 @@
       var cheap = S.hotelRooms[0];
       if (cheap) toggleFav(Object.assign({}, cheap, { hotel_id: S.hotel.hotel_id, hotel_name: S.hotel.hotel_name, star: S.hotel.star, city: S.hotel.city, default_photo: S.hotel.default_photo }));
     }
-    else if (a === 'shareLink') copyToClipboard(location.href);
+    else if (a === 'shareLink') { copyToClipboard(location.href); toast(t('linkCopied'), 'success'); }
     else if (a === 'reserveCheapest') {
       if (S.hotelRooms && S.hotelRooms.length) {
         var cheapest = S.hotelRooms[0];  // already sorted by price asc
@@ -873,7 +1014,7 @@
         });
         openReserve(enriched);
       } else {
-        toast('Nu sunt camere disponibile pentru rezervare', 'error');
+        toast(t('noRoomsAvailable'), 'error');
       }
     }
     else if (a === 'reserve') {
@@ -889,17 +1030,17 @@
     else if (a === 'sort') { S.sortBy = t.value; render(); }
     else if (a === 'copyFav') { var f = findOffer(t.getAttribute('data-priceid')); if (f) copyToClipboard(copyFavText(f)); }
     else if (a === 'copyAllFavs') {
-      var txt = '🦓 Zebra Tur — ' + S.favorites.length + ' oferte\n' + '─'.repeat(40) + '\n\n' +
+      var txt = '🦓 Zebra Tur — ' + S.favorites.length + ' ' + t('ztOffers') + '\n' + '─'.repeat(40) + '\n\n' +
         S.favorites.map(function(f, i){ return (i+1) + '. ' + copyFavText(f); }).join('\n\n') +
-        '\n\n' + '─'.repeat(40) + '\n📞 Contact: +37378326222';
+        '\n\n' + '─'.repeat(40) + '\n📞 ' + t('contact') + ': +37378326222';
       copyToClipboard(txt);
     }
     else if (a === 'shareWhatsApp') {
-      var txt = '🦓 Zebra Tur — ' + S.favorites.length + ' oferte\n\n' + S.favorites.map(function(f, i){ return (i+1) + '. ' + copyFavText(f); }).join('\n\n');
+      var txt = '🦓 Zebra Tur — ' + S.favorites.length + ' ' + t('ztOffers') + '\n\n' + S.favorites.map(function(f, i){ return (i+1) + '. ' + copyFavText(f); }).join('\n\n');
       window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank');
     }
     else if (a === 'clearFavs') {
-      if (confirm('Ștergi toate favoritele?')) { S.favorites = []; saveFavs(); render(); }
+      if (confirm(t('favConfirmClear'))) { S.favorites = []; saveFavs(); render(); }
     }
     else if (a === 'removeFav') {
       var pid = parseInt(t.getAttribute('data-priceid'));
@@ -936,7 +1077,7 @@
     // FAB + favorites panel
     html += '<button class="zt-fav-fab" data-action="favToggle" aria-label="Favorite">❤️' + (S.favorites.length ? '<span class="zt-fav-fab-badge">'+S.favorites.length+'</span>' : '') + '</button>';
     html += '<div class="zt-overlay '+(S.favOpen?'zt-open':'')+'" data-action="favToggle"></div>';
-    html += '<div class="zt-fav-panel '+(S.favOpen?'zt-open':'')+'"><div style="padding:14px;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;"><h3 style="margin:0;font-size:20px;">❤️ Favoritele mele</h3><button class="zt-modal-close" data-action="favToggle">×</button></div>' + tplFavoritesPanel() + '</div>';
+    html += '<div class="zt-fav-panel '+(S.favOpen?'zt-open':'')+'"><div style="padding:14px;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;"><h3 style="margin:0;font-size:20px;">'+t('favTitle')+'</h3><button class="zt-modal-close" data-action="favToggle">×</button></div>' + tplFavoritesPanel() + '</div>';
 
     // Reserve modal
     if (S.reserveOpen && S.reserveOffer) html += tplReserveModal(S.reserveOffer);
