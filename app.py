@@ -673,9 +673,12 @@ def search_packages():
 def package_page():
     session = request.args.get("session")
     page = request.args.get("page", type=int, default=1)
+    markup = request.args.get("markup_percent", type=float) or 0
+    adults = request.args.get("adults", type=int) or 2
     if not session:
         return _json_error("missing session")
-    return jsonify(client.get_pricing_page(session, page))
+    data = client.get_pricing_page(session, page)
+    return jsonify(_decorate_package_results(data, {"markup_percent": markup, "adults": adults}))
 
 
 @app.route("/api/hotel/details", methods=["POST"])

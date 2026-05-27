@@ -67,6 +67,7 @@
       copied: '✅ Copiat!', linkCopied: '🔗 Link copiat!',
       noRoomsAvailable: 'Nu sunt camere disponibile pentru rezervare',
       ztOffers: 'oferte', contact: 'Contact',
+      showMore: 'Mai vezi încă {n} oferte', prevPage: '← Pagina anterioară', nextPage: 'Pagina următoare →', pageInfo: 'Pagina {x} din {y}', loadingPage: 'Se încarcă...',
       // Months for date formatting
       // (we use ISO dates, native input handles display)
     },
@@ -109,6 +110,7 @@
       copied: '✅ Скопировано!', linkCopied: '🔗 Ссылка скопирована!',
       noRoomsAvailable: 'Нет доступных номеров для бронирования',
       ztOffers: 'предложений', contact: 'Контакт',
+      showMore: 'Показать ещё {n} предложений', prevPage: '← Предыдущая', nextPage: 'Следующая →', pageInfo: 'Страница {x} из {y}', loadingPage: 'Загрузка...',
     }
   };
 
@@ -146,6 +148,7 @@
       mealIds: [6, 20], starIds: [5, 6], facilityIds: [],
     },
     results: null, loading: false, sortBy: 'price_asc',
+    displayCount: 30, loadingPage: false,
     view: 'search',  // search | hotel
     hotel: null, hotelRooms: [], hotelPhotoIdx: 0,
     favorites: loadFavs(),
@@ -551,6 +554,13 @@
       return '<div class="zt-card" style="text-align:center;padding:40px;color:#64748b;">' + t('noOffers') + '</div>';
     }
     var label = prices.length === 1 ? t('offerFound') : t('offersFound');
+    var visible = prices.slice(0, S.displayCount);
+    var totalPages = (S.results && S.results.total_pages) || 1;
+    var currentPage = (S.results && S.results.current_page) || 1;
+    var remaining = prices.length - S.displayCount;
+    var batchSize = Math.min(30, remaining);
+    var showMoreLabel = t('showMore').replace('{n}', batchSize);
+    var pageInfo = t('pageInfo').replace('{x}', currentPage).replace('{y}', totalPages);
     return `
       <div class="zt-row" style="justify-content:space-between;margin-bottom:12px;">
         <h2 style="margin:0;font-size:20px;font-weight:700;">${prices.length} ${label}</h2>
@@ -561,8 +571,27 @@
         </select>
       </div>
       <div class="zt-results-grid">
-        ${prices.map(tplHotelCard).join('')}
+        ${visible.map(tplHotelCard).join('')}
       </div>
+      ${remaining > 0 ? `
+        <div style="text-align:center;margin-top:20px;">
+          <button class="zt-btn zt-btn-secondary" style="padding:12px 28px;font-size:15px;" data-action="showMore">
+            ${showMoreLabel}
+          </button>
+          <div style="font-size:12px;color:#94a3b8;margin-top:6px;">
+            ${visible.length} / ${prices.length}
+          </div>
+        </div>
+      ` : ''}
+      ${totalPages > 1 ? `
+        <div class="zt-row" style="justify-content:space-between;align-items:center;margin-top:20px;padding-top:16px;border-top:1px solid #e2e8f0;flex-wrap:wrap;gap:8px;">
+          <button class="zt-btn zt-btn-secondary" data-action="prevPage" ${currentPage<=1 || S.loadingPage?'disabled':''}>${t('prevPage')}</button>
+          <div style="font-size:14px;color:#64748b;font-weight:500;">
+            ${S.loadingPage ? '<span class="zt-spinner">⏳</span> ' + t('loadingPage') : pageInfo}
+          </div>
+          <button class="zt-btn zt-btn-secondary" data-action="nextPage" ${currentPage>=totalPages || S.loadingPage?'disabled':''}>${t('nextPage')}</button>
+        </div>
+      ` : ''}
     `;
   }
 
@@ -831,7 +860,7 @@
   async function doSearch() {
     var pkg = pickPackage();
     if (!pkg) { toast('Pachetele nu s-au încărcat. Reîncarcă.', 'error'); return; }
-    S.loading = true; S.results = null; render();
+    S.loading = true; S.results = null; S.displayCount = 30; render();
     var terminalId = (S.filters.tripType === 'bus' && pkg.departure_terminals && pkg.departure_terminals.length) ? pkg.departure_terminals[0].id : 0;
     try {
       var r = await api('/api/search/packages', {
@@ -861,6 +890,39 @@
           if (resultsAnchor) resultsAnchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
       }, 100);
+    }
+  }
+
+  async function loadPage(pageNum) {
+    if (!S.results || !S.results.session) return;
+    if (pageNum < 1 || pageNum > (S.results.total_pages || 1)) return;
+    S.loadingPage = true; render();
+    try {
+      var qs = new URLSearchParams({
+        session: S.results.session,
+        page: pageNum,
+        markup_percent: 0,
+        adults: S.filters.adults,
+      });
+      var r = await fetch(API + '/api/search/packages/page?' + qs.toString()).then(function(r){ return r.json(); });
+      if (r && r.error) throw new Error(r.error);
+      // Preserve session in new results
+      r.session = S.results.session;
+      S.results = r;
+      S.displayCount = 30;
+    } catch (e) {
+      toast('Eroare: ' + (e.message || e), 'error');
+    } finally {
+      S.loadingPage = false;
+      render();
+      setTimeout(function() {
+        var grid = rootEl && rootEl.querySelector('.zt-results-grid');
+        if (grid) {
+          var rect = grid.getBoundingClientRect();
+          var top = (window.pageYOffset || document.documentElement.scrollTop) + rect.top - 120;
+          window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+        }
+      }, 80);
     }
   }
 
@@ -1059,6 +1121,9 @@
     else if (a === 'photoGoto') { S.hotelPhotoIdx = parseInt(el.getAttribute('data-idx')); render(); }
     else if (a === 'favToggle') { S.favOpen = !S.favOpen; render(); }
     else if (a === 'sort') { S.sortBy = el.value; render(); }
+    else if (a === 'showMore') { S.displayCount += 30; render(); }
+    else if (a === 'prevPage') { loadPage((S.results && S.results.current_page || 1) - 1); }
+    else if (a === 'nextPage') { loadPage((S.results && S.results.current_page || 1) + 1); }
     else if (a === 'copyFav') { var f = findOffer(el.getAttribute('data-priceid')); if (f) copyToClipboard(copyFavText(f)); }
     else if (a === 'copyAllFavs') {
       var allTxt = S.favorites.map(function(f, i){ return (i+1) + '. ' + copyFavText(f); }).join('\n\n\n');
