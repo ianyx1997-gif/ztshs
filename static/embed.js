@@ -988,40 +988,39 @@
 
   // ============ EVENT HANDLER ============
   function onClick(ev) {
-    var t = ev.target.closest('[data-action]');
-    if (!t) return;
-    var a = t.getAttribute('data-action');
-    var stop = t.getAttribute('data-stop');
+    var el = ev.target.closest('[data-action]');
+    if (!el) return;
+    var a = el.getAttribute('data-action');
+    var stop = el.getAttribute('data-stop');
     if (stop) ev.stopPropagation();
 
-    if (a === 'trip') setTrip(t.getAttribute('data-value'));
-    else if (a === 'meal') toggleMeal(parseInt(t.getAttribute('data-value')));
-    else if (a === 'star') toggleStar(parseInt(t.getAttribute('data-value')));
-    else if (a === 'fac') toggleFacility(parseInt(t.getAttribute('data-value')));
-    else if (a === 'adults') adjustAdults(parseInt(t.getAttribute('data-value')));
-    else if (a === 'child') adjustChild(parseInt(t.getAttribute('data-value')));
+    if (a === 'trip') setTrip(el.getAttribute('data-value'));
+    else if (a === 'meal') toggleMeal(parseInt(el.getAttribute('data-value')));
+    else if (a === 'star') toggleStar(parseInt(el.getAttribute('data-value')));
+    else if (a === 'fac') toggleFacility(parseInt(el.getAttribute('data-value')));
+    else if (a === 'adults') adjustAdults(parseInt(el.getAttribute('data-value')));
+    else if (a === 'child') adjustChild(parseInt(el.getAttribute('data-value')));
     else if (a === 'paxToggle') { S.paxOpen = !S.paxOpen; render(); }
     else if (a === 'paxClose') { S.paxOpen = false; render(); }
     else if (a === 'search') doSearch();
     else if (a === 'openHotel') {
-      if (S.favOpen) S.favOpen = false;  // close favorites panel when navigating to hotel
-      openHotel(t.getAttribute('data-hotel'), t.getAttribute('data-priceid'));
+      if (S.favOpen) S.favOpen = false;
+      openHotel(el.getAttribute('data-hotel'), el.getAttribute('data-priceid'));
     }
     else if (a === 'backToSearch') backToSearch();
     else if (a === 'toggleFav') {
-      var o = findOffer(t.getAttribute('data-priceid'));
+      var o = findOffer(el.getAttribute('data-priceid'));
       if (o) toggleFav(o);
     }
     else if (a === 'toggleFavHotel') {
       if (!S.hotel) return;
-      // Find cheapest offer for this hotel
       var cheap = S.hotelRooms[0];
       if (cheap) toggleFav(Object.assign({}, cheap, { hotel_id: S.hotel.hotel_id, hotel_name: S.hotel.hotel_name, star: S.hotel.star, city: S.hotel.city, default_photo: S.hotel.default_photo }));
     }
     else if (a === 'shareLink') { copyToClipboard(location.href); toast(t('linkCopied'), 'success'); }
     else if (a === 'reserveCheapest') {
       if (S.hotelRooms && S.hotelRooms.length) {
-        var cheapest = S.hotelRooms[0];  // already sorted by price asc
+        var cheapest = S.hotelRooms[0];
         var enriched = Object.assign({}, cheapest, {
           hotel_name: S.hotel ? S.hotel.hotel_name : cheapest.hotel_name,
           star: S.hotel ? S.hotel.star : cheapest.star,
@@ -1034,50 +1033,50 @@
       }
     }
     else if (a === 'reserve') {
-      var off = findOffer(t.getAttribute('data-priceid'));
+      var off = findOffer(el.getAttribute('data-priceid'));
       if (off) openReserve(off);
     }
     else if (a === 'closeReserve') closeReserve();
     else if (a === 'submitReserve') submitReserve();
     else if (a === 'photoNext') { if (S.hotel && S.hotel.photos) { S.hotelPhotoIdx = (S.hotelPhotoIdx+1) % S.hotel.photos.length; render(); } }
     else if (a === 'photoPrev') { if (S.hotel && S.hotel.photos) { S.hotelPhotoIdx = (S.hotelPhotoIdx-1+S.hotel.photos.length) % S.hotel.photos.length; render(); } }
-    else if (a === 'photoGoto') { S.hotelPhotoIdx = parseInt(t.getAttribute('data-idx')); render(); }
+    else if (a === 'photoGoto') { S.hotelPhotoIdx = parseInt(el.getAttribute('data-idx')); render(); }
     else if (a === 'favToggle') { S.favOpen = !S.favOpen; render(); }
-    else if (a === 'sort') { S.sortBy = t.value; render(); }
-    else if (a === 'copyFav') { var f = findOffer(t.getAttribute('data-priceid')); if (f) copyToClipboard(copyFavText(f)); }
+    else if (a === 'sort') { S.sortBy = el.value; render(); }
+    else if (a === 'copyFav') { var f = findOffer(el.getAttribute('data-priceid')); if (f) copyToClipboard(copyFavText(f)); }
     else if (a === 'copyAllFavs') {
-      var txt = '🦓 Zebra Tur — ' + S.favorites.length + ' ' + t('ztOffers') + '\n' + '─'.repeat(40) + '\n\n' +
+      var allTxt = '🦓 Zebra Tur — ' + S.favorites.length + ' ' + t('ztOffers') + '\n' + '─'.repeat(40) + '\n\n' +
         S.favorites.map(function(f, i){ return (i+1) + '. ' + copyFavText(f); }).join('\n\n') +
         '\n\n' + '─'.repeat(40) + '\n📞 ' + t('contact') + ': +37378326222';
-      copyToClipboard(txt);
+      copyToClipboard(allTxt);
     }
     else if (a === 'shareWhatsApp') {
-      var txt = '🦓 Zebra Tur — ' + S.favorites.length + ' ' + t('ztOffers') + '\n\n' + S.favorites.map(function(f, i){ return (i+1) + '. ' + copyFavText(f); }).join('\n\n');
-      window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank');
+      var waTxt = '🦓 Zebra Tur — ' + S.favorites.length + ' ' + t('ztOffers') + '\n\n' + S.favorites.map(function(f, i){ return (i+1) + '. ' + copyFavText(f); }).join('\n\n');
+      window.open('https://wa.me/?text=' + encodeURIComponent(waTxt), '_blank');
     }
     else if (a === 'clearFavs') {
       if (confirm(t('favConfirmClear'))) { S.favorites = []; saveFavs(); render(); }
     }
     else if (a === 'removeFav') {
-      var pid = parseInt(t.getAttribute('data-priceid'));
+      var pid = parseInt(el.getAttribute('data-priceid'));
       var i = S.favorites.findIndex(function(f){ return f.price_id === pid; });
       if (i >= 0) { S.favorites.splice(i,1); saveFavs(); render(); }
     }
   }
   function onChange(ev) {
-    var t = ev.target;
-    var a = t.getAttribute('data-action');
-    if (a === 'filter') setFilter(t.getAttribute('data-key'), t.value);
-    else if (a === 'childage') setChildAge(parseInt(t.getAttribute('data-idx')), t.value);
-    else if (a === 'sort') { S.sortBy = t.value; render(); }
+    var el = ev.target;
+    var a = el.getAttribute('data-action');
+    if (a === 'filter') setFilter(el.getAttribute('data-key'), el.value);
+    else if (a === 'childage') setChildAge(parseInt(el.getAttribute('data-idx')), el.value);
+    else if (a === 'sort') { S.sortBy = el.value; render(); }
   }
   function onInput(ev) {
-    var t = ev.target;
-    var a = t.getAttribute('data-action');
+    var el = ev.target;
+    var a = el.getAttribute('data-action');
     if (a === 'filter') {
-      var k = t.getAttribute('data-key');
-      if (k === 'dateFrom' || k === 'dateTo') S.filters[k] = t.value;
-      else if (k === 'cityId') S.filters.cityId = t.value;
+      var k = el.getAttribute('data-key');
+      if (k === 'dateFrom' || k === 'dateTo') S.filters[k] = el.value;
+      else if (k === 'cityId') S.filters.cityId = el.value;
     }
   }
 
