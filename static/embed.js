@@ -597,11 +597,11 @@
   function tplHotelPage() {
     var h = S.hotel;
     return `
-      <div class="zt-row" style="justify-content:space-between;margin-bottom:14px;gap:8px;flex-wrap:wrap;">
+      ${h ? tplHotelHeader(h) : '<div class="zt-card" style="text-align:center;padding:40px;">'+t('loading')+'</div>'}
+      <div class="zt-row" style="justify-content:space-between;margin:14px 0;gap:8px;flex-wrap:wrap;">
         <button class="zt-btn zt-btn-secondary" data-action="backToSearch">${t('backToSearch')}</button>
         <button class="zt-btn zt-btn-primary" data-action="reserveCheapest">${t('reserveTemp')}</button>
       </div>
-      ${h ? tplHotelHeader(h) : '<div class="zt-card" style="text-align:center;padding:40px;">'+t('loading')+'</div>'}
       ${h ? tplHotelGallery(h) : ''}
       ${h ? tplHotelRooms() : ''}
       ${h && h.description ? '<div class="zt-card" style="margin-top:16px;"><h2 style="margin:0 0 12px;font-size:18px;">'+t('aboutHotel')+'</h2><div style="font-size:14px;line-height:1.6;">' + h.description + '</div></div>' : ''}
