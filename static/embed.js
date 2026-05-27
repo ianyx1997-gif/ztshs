@@ -964,6 +964,22 @@
     }
   }
 
+  function shareWhatsApp(text) {
+    // Prefer native share API on mobile — handles UTF-8 emoji perfectly via OS-level share sheet
+    var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    if (isMobile && navigator.share) {
+      navigator.share({ text: text }).catch(function(){});
+      return;
+    }
+    // Fallback: open WhatsApp URL in new tab/window
+    var encoded = encodeURIComponent(text);
+    var url = isMobile
+      ? 'whatsapp://send?text=' + encoded
+      : 'https://web.whatsapp.com/send?text=' + encoded;
+    var w = window.open(url, '_blank');
+    if (!w) location.href = url;
+  }
+
   function copyFavText(f) {
     var lines = ['🏨 ' + (f.hotel_name||'') + ' ' + (f.star||''),
       '📍 ' + (f.city||'Bulgaria'),
@@ -1045,14 +1061,12 @@
     else if (a === 'sort') { S.sortBy = el.value; render(); }
     else if (a === 'copyFav') { var f = findOffer(el.getAttribute('data-priceid')); if (f) copyToClipboard(copyFavText(f)); }
     else if (a === 'copyAllFavs') {
-      var allTxt = '🦓 Zebra Tur — ' + S.favorites.length + ' ' + t('ztOffers') + '\n' + '─'.repeat(40) + '\n\n' +
-        S.favorites.map(function(f, i){ return (i+1) + '. ' + copyFavText(f); }).join('\n\n') +
-        '\n\n' + '─'.repeat(40) + '\n📞 ' + t('contact') + ': +37378326222';
+      var allTxt = S.favorites.map(function(f, i){ return (i+1) + '. ' + copyFavText(f); }).join('\n\n\n');
       copyToClipboard(allTxt);
     }
     else if (a === 'shareWhatsApp') {
-      var waTxt = '🦓 Zebra Tur — ' + S.favorites.length + ' ' + t('ztOffers') + '\n\n' + S.favorites.map(function(f, i){ return (i+1) + '. ' + copyFavText(f); }).join('\n\n');
-      window.open('https://wa.me/?text=' + encodeURIComponent(waTxt), '_blank');
+      var waTxt = S.favorites.map(function(f, i){ return (i+1) + '. ' + copyFavText(f); }).join('\n\n\n');
+      shareWhatsApp(waTxt);
     }
     else if (a === 'clearFavs') {
       if (confirm(t('favConfirmClear'))) { S.favorites = []; saveFavs(); render(); }
