@@ -387,7 +387,7 @@
     return `
       <div class="zt-hotel-card" data-action="openHotel" data-hotel="${esc(o.hotel_id)}" data-priceid="${esc(o.price_id)}">
         <div class="zt-hotel-photo">
-          ${photoSrc ? '<img src="'+esc(photoSrc)+'" loading="lazy" onerror="this.style.display=\\'none\\'">' : '<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:48px;">🏨</div>'}
+          ${photoSrc ? '<img src="'+esc(photoSrc)+'" loading="lazy" onerror="this.style.display=&quot;none&quot;">' : '<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:48px;">🏨</div>'}
           <div class="zt-badge-star">${esc(o.star || '')}</div>
           <button class="zt-fav-btn" data-action="toggleFav" data-priceid="${esc(o.price_id)}" data-stop="1" aria-label="Favorite">
             ${isFav(o) ? '❤️' : '🤍'}
@@ -456,7 +456,7 @@
           ${photos.length > 1 ? '<button class="zt-photo-nav zt-photo-nav-l" data-action="photoPrev">‹</button><button class="zt-photo-nav zt-photo-nav-r" data-action="photoNext">›</button><div class="zt-photo-counter">'+(idx+1)+' / '+photos.length+'</div>' : ''}
         </div>
         ${photos.length > 1 ? '<div class="zt-photo-thumbs">'+photos.map(function(p, i){
-          return '<div class="zt-photo-thumb '+(i===idx?'zt-photo-thumb-active':'')+'" data-action="photoGoto" data-idx="'+i+'"><img src="'+esc(p)+'" loading="lazy" onerror="this.style.display=\\'none\\'"></div>';
+          return '<div class="zt-photo-thumb '+(i===idx?'zt-photo-thumb-active':'')+'" data-action="photoGoto" data-idx="'+i+'"><img src="'+esc(p)+'" loading="lazy" onerror="this.style.display=&quot;none&quot;"></div>';
         }).join('')+'</div>' : ''}
       </div>
     `;
@@ -560,7 +560,7 @@
       <div style="padding:12px;">
         ${S.favorites.map(function(f){
           return '<div class="zt-fav-row"><div class="zt-fav-img">'+
-            (f.default_photo ? '<img src="'+esc(f.default_photo)+'" loading="lazy" onerror="this.style.display=\\'none\\'">' : '')+
+            (f.default_photo ? '<img src="'+esc(f.default_photo)+'" loading="lazy" onerror="this.style.display=&quot;none&quot;">' : '')+
             '</div><div style="flex:1;min-width:0;"><div style="font-weight:700;">'+esc(f.hotel_name)+' '+esc(f.star||'')+'</div>'+
             '<div style="font-size:12px;color:#64748b;">📍 '+esc(f.city||'')+'</div>'+
             '<div style="font-size:12px;margin-top:4px;">📅 '+formatDate(f.check_in)+' → '+formatDate(f.check_out)+' ('+(f.nights||'?')+'n)</div>'+
