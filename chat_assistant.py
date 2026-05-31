@@ -44,7 +44,8 @@ SEARCH_TOOL = {
         "Search Bulgaria vacation offers in SHS booking system. "
         "Returns a list of available packages with hotel, room, dates, price, and share URL. "
         "Use this whenever a manager describes what they're looking for. "
-        "Always use it instead of guessing — only this tool has real prices and availability."
+        "IMPORTANT: if a child age >= 12, set `auto_adjust_teens` to true — most Bulgarian hotels "
+        "charge children >= 12 as adults (CHD category ends at 11.99). Tool auto-retries with adjusted counts."
     ),
     "input_schema": {
         "type": "object",
@@ -57,9 +58,13 @@ SEARCH_TOOL = {
                 "type": "array", "items": {"type": "integer"},
                 "description": "Ages of children, e.g. [4, 8]. Empty if no children."
             },
+            "auto_adjust_teens": {
+                "type": "boolean",
+                "description": "If true and original search returns < 3 results, automatically retry treating children >= 12 as adults (most Bulgarian hotels price them as adults). Default true."
+            },
             "star_categories": {
                 "type": "array", "items": {"type": "string", "enum": ["3", "4", "5"]},
-                "description": "Required hotel stars. ['5']=5* only, ['4','5']=4-5*. Default ['4','5']."
+                "description": "Required hotel stars. ['5']=5* only, ['4','5']=4-5*. Default ['3','4','5'] (show all from 3 stars up). Only restrict if manager explicitly asks for specific stars."
             },
             "meal_types": {
                 "type": "array",
@@ -68,12 +73,12 @@ SEARCH_TOOL = {
             },
             "facilities": {
                 "type": "array",
-                "items": {"type": "string", "enum": ["first_line", "pool", "aquapark", "beach_loungers", "adult_only", "wifi", "parking"]},
-                "description": "Required hotel facilities. first_line=beachfront."
+                "items": {"type": "string", "enum": ["pool", "aquapark", "adult_only", "wifi", "parking"]},
+                "description": "Required hotel facilities. DO NOT use 'first_line' or 'beach_loungers' here — they're too restrictive. For first-line hotels, prefer beachfront resorts (Sunny Beach, Golden Sands, Albena) and verify via get_hotel_info if specific hotel."
             },
             "resort_names": {
                 "type": "array", "items": {"type": "string"},
-                "description": "Preferred resorts e.g. ['Sunny Beach', 'Golden Sands', 'Nessebar', 'Albena']."
+                "description": "Preferred resorts e.g. ['Sunny Beach', 'Golden Sands', 'Nessebar', 'Albena']. Top first-line resorts: Sunny Beach, Golden Sands, Albena, Elenite, Sveti Vlas."
             },
             "hotel_names": {
                 "type": "array", "items": {"type": "string"},
@@ -86,6 +91,14 @@ SEARCH_TOOL = {
             "max_results": {
                 "type": "integer",
                 "description": "Number of offers to return, default 5, max 15"
+            },
+            "max_budget_eur": {
+                "type": "integer",
+                "description": "Optional max price filter in EUR. Tool returns only offers <= this price. Use when manager mentions a budget ceiling."
+            },
+            "min_budget_eur": {
+                "type": "integer",
+                "description": "Optional min price filter in EUR. Use when manager specifies a budget range (e.g. 1000-1500)."
             }
         },
         "required": ["from_date", "to_date"]
@@ -93,8 +106,54 @@ SEARCH_TOOL = {
 }
 
 
+HOTEL_INFO_TOOL = {
+    "name": "get_hotel_info",
+    "description": (
+        "Get detailed hotel description, facilities list, and photos for a specific hotel. "
+        "Use this when manager asks about a hotel's amenities, beach proximity (first line), "
+        "or to verify a feature like 'has aquapark' / 'is adults only'. Description text often "
+        "mentions 'first line', 'beachfront', distance to beach, etc."
+    ),
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "hotel_name": {"type": "string", "description": "Hotel name to search (e.g. 'MERCURY', 'ADMIRAL')"},
+            "hotel_id": {"type": "integer", "description": "SHS hotel ID if known (e.g. 12122 for ADMIRAL Golden Sands)"}
+        }
+    }
+}
+
+
 def execute_search_offers(args: dict) -> dict:
-    """Execute the search with mapped parameters and format results."""
+    """Execute the search with mapped parameters and format results. Auto-retries with teens-as-adults."""
+    # Pre-process: auto-adjust teens (children >= 12) on retry
+    children_orig = [int(x) for x in (args.get("children_ages") or []) if isinstance(x, (int, float))]
+    teens = [c for c in children_orig if c >= 12]
+    auto_adjust = args.get("auto_adjust_teens", True)
+
+    result = _execute_search_internal(args, children_orig)
+    if (result.get("offers") and len(result["offers"]) >= 3) or not auto_adjust or not teens:
+        return result
+
+    # Retry with teens promoted to adults
+    log.info("Auto-adjusting: %d teens >= 12 promoted to adults", len(teens))
+    children_adj = [c for c in children_orig if c < 12]
+    adults_adj = int(args.get("adults", 2)) + len(teens)
+    args2 = dict(args)
+    args2["adults"] = adults_adj
+    args2["children_ages"] = children_adj
+    retry = _execute_search_internal(args2, children_orig)
+    retry["_auto_adjusted"] = {
+        "original_setup": f"{args.get('adults', 2)} adulți + {len(children_orig)} copii ({','.join(map(str, children_orig))} ani)",
+        "adjusted_setup": f"{adults_adj} adulți + {len(children_adj)} copii ({','.join(map(str, children_adj)) if children_adj else 'fără'} ani)",
+        "reason": f"Hotelurile bulgare tarifează copilul >= 12 ani ca adult (categoria CHD până la 11.99). Promovat: {len(teens)} copil(i) de {','.join(map(str, teens))} ani.",
+        "original_results": len(result.get("offers", [])),
+    }
+    return retry
+
+
+def _execute_search_internal(args: dict, original_children: list) -> dict:
+    """Run one search iteration without retry logic."""
     try:
         from_date = args.get("from_date") or (date.today() + timedelta(days=30)).isoformat()
         to_date = args.get("to_date") or (date.today() + timedelta(days=60)).isoformat()
@@ -102,7 +161,7 @@ def execute_search_offers(args: dict) -> dict:
         adults = int(args.get("adults") or 2)
         children = [int(x) for x in (args.get("children_ages") or []) if isinstance(x, (int, float))]
 
-        star_ids = [STAR_MAP[s] for s in (args.get("star_categories") or ["4", "5"]) if s in STAR_MAP]
+        star_ids = [STAR_MAP[s] for s in (args.get("star_categories") or ["3", "4", "5"]) if s in STAR_MAP]
         meal_ids = [MEAL_MAP[m] for m in (args.get("meal_types") or ["all_inclusive", "ultra_all_inclusive"]) if m in MEAL_MAP]
         facility_ids = [FACILITY_MAP[f] for f in (args.get("facilities") or []) if f in FACILITY_MAP]
 
@@ -188,9 +247,24 @@ def execute_search_offers(args: dict) -> dict:
             }
 
         prices = data.get("prices", []) or []
-        prices.sort(key=lambda x: x.get("brut_zebra") or x.get("gross_amount") or 9e9)
+        # Filter by budget if specified — with flexible window: -7% on min, +10% on max
+        # (managers' budgets are approximate; clients accept slightly cheaper or a bit more expensive)
+        min_b = args.get("min_budget_eur")
+        max_b = args.get("max_budget_eur")
+        eff_min = round(min_b * 0.93) if min_b else None   # allow 7% under the stated minimum
+        eff_max = round(max_b * 1.10) if max_b else None   # allow 10% over the stated maximum
+        if eff_min or eff_max:
+            def in_budget(p):
+                price = p.get("brut_zebra") or p.get("gross_amount") or 0
+                if eff_min and price < eff_min: return False
+                if eff_max and price > eff_max: return False
+                return True
+            filtered = [p for p in prices if in_budget(p)]
+        else:
+            filtered = prices
+        filtered.sort(key=lambda x: x.get("brut_zebra") or x.get("gross_amount") or 9e9)
         max_results = min(int(args.get("max_results") or 5), 15)
-        top = prices[:max_results]
+        top = filtered[:max_results]
 
         # Best-effort enrich with city + photo (single batched call)
         if top:
@@ -231,15 +305,21 @@ def execute_search_offers(args: dict) -> dict:
                 "placement": p.get("placement", ""),
                 "price_eur": round(float(price)),
                 "hotel_id": p.get("hotel_id"),
-                "share_url": _build_share_url(p, adults, children, nights, trip_type),
+                "share_url": _build_share_url(p, adults, original_children or children, nights, trip_type),
             })
 
         return {
             "offers": offers,
-            "total_found": len(prices),
+            "total_found_no_budget_filter": len(prices),
+            "total_in_budget": len(filtered),
             "shown": len(offers),
             "trip_type_used": trip_type,
             "package_id_used": package_id,
+            "budget_applied": {
+                "requested_min": min_b, "requested_max": max_b,
+                "effective_min": eff_min, "effective_max": eff_max,
+                "note": "Fereastră flexibilă aplicată: -7% sub minim, +10% peste maxim",
+            } if (min_b or max_b) else None,
         }
 
     except SHSError as e:
@@ -247,6 +327,88 @@ def execute_search_offers(args: dict) -> dict:
     except Exception as e:
         log.exception("search_offers failed")
         return {"error": str(e), "offers": [], "total_found": 0}
+
+
+def execute_get_hotel_info(args: dict) -> dict:
+    """Look up a specific hotel by name or id and return description + facilities."""
+    try:
+        hotel_id = args.get("hotel_id")
+        hotel_name = (args.get("hotel_name") or "").strip()
+        if not hotel_id and not hotel_name:
+            return {"error": "provide hotel_name or hotel_id"}
+
+        # Resolve hotel_id from name
+        if not hotel_id and hotel_name:
+            hotels = client.get_hotel_list(country_id=1) or []
+            nlow = hotel_name.lower()
+            matches = [h for h in hotels if nlow in (h.get("name") or "").lower()]
+            if not matches:
+                return {"error": f"no hotel matching '{hotel_name}'", "suggestions": []}
+            if len(matches) > 1:
+                # Multiple matches — return list for clarification
+                return {
+                    "multiple_matches": [
+                        {"hotel_id": h["id"], "name": h["name"], "city": h.get("city_name"), "category": h.get("category")}
+                        for h in matches[:6]
+                    ],
+                    "note": "Multiple hotels match the name. Pick one by hotel_id and call get_hotel_info again."
+                }
+            hotel_id = matches[0]["id"]
+
+        # Fetch details via /hotel/search with description
+        from datetime import date, timedelta
+        future = (date.today() + timedelta(days=30)).isoformat()
+        data = client.search_hotels(
+            adults=2, children=[],
+            from_date=future, to_date=future,
+            from_nights=7, to_nights=7,
+            hotel_ids=[int(hotel_id)],
+            with_description=True, show_stops=True,
+        ) or {}
+        hotels = data.get("hotels") or []
+        if not hotels:
+            return {"error": f"hotel id {hotel_id} not found in inventory"}
+        h = hotels[0]
+
+        # Detect first-line mentions in description
+        desc = (h.get("description") or "")
+        desc_text = desc.replace("<", " <").lower()
+        first_line_keywords = ["first line", "първа линия", "первая линия", "beachfront", "на берегу", "primul rând", "prima linie"]
+        is_first_line = any(kw in desc_text for kw in first_line_keywords)
+
+        # Map facility_ids to readable labels
+        all_fac = client.get_hotel_facilities() or []
+        fac_lookup = {f["id"]: f for f in all_fac if isinstance(f, dict)}
+        fac_labels = []
+        for fid in (h.get("facility_ids") or []):
+            f = fac_lookup.get(fid)
+            if f:
+                tr = (f.get("translation") or {})
+                fac_labels.append(tr.get("ro") or tr.get("ru") or f.get("name") or f"#{fid}")
+
+        return {
+            "hotel_id": h.get("hotel_id"),
+            "hotel_name": h.get("hotel_name"),
+            "star": h.get("star"),
+            "city": h.get("city"),
+            "country": h.get("country"),
+            "is_first_line_per_description": is_first_line,
+            "facilities": fac_labels,
+            "description_excerpt": _strip_html(desc)[:1500],
+            "has_full_description": bool(desc),
+        }
+    except Exception as e:
+        log.exception("get_hotel_info failed")
+        return {"error": str(e)}
+
+
+def _strip_html(s: str) -> str:
+    import re, html
+    s = re.sub(r"<[^>]+>", " ", s or "")
+    s = html.unescape(s)  # decode &nbsp; &amp; &quot; etc.
+    s = s.replace("\xa0", " ")  # non-breaking space → normal space
+    s = re.sub(r"\s+", " ", s).strip()
+    return s
 
 
 def _build_share_url(p: dict, adults: int, children: list, nights: int, trip_type: str) -> str:
@@ -272,56 +434,138 @@ def system_prompt() -> str:
 
 Data curentă: {today}
 
-ROLUL TĂU: managerii îți scriu în română sau rusă ce caută clienții, iar tu cauți oferte concrete în sistemul SHS și le returnezi formatat pentru copy-paste imediat la client.
+ROLUL TĂU: managerii îți scriu în română sau rusă ce caută clienții, iar tu cauți oferte concrete în sistemul SHS și le returnezi formatat pentru copy-paste imediat la client prin WhatsApp/Telegram.
 
-TIPURI DE PACHETE:
-- hotel_only (default) — clientul vine cu mașina personală sau își aranjează singur transportul
-- with_bus — pachet complet cu autocar charter Chișinău ⇄ Bulgaria + asigurare + transfer aeroport (mai scump dar transport inclus)
+═══════════ INSTRUMENTELE TALE ═══════════
 
-VALORI IMPLICITE când managerul nu specifică:
-- adults: 2
-- nights: 7
-- meal_types: ["all_inclusive", "ultra_all_inclusive"]
-- star_categories: ["4", "5"]
-- trip_type: "hotel_only"
-- max_results: 5
-- Dacă nu spune luna: presupune lunile sezon (iunie–septembrie), preferabil cea care urmează
+1. **search_offers** — caută oferte SHS cu filtre multiple. Returnează prețuri reale.
+2. **get_hotel_info** — citește descrierea + facilitățile + locația unui hotel specific. Folosește pentru verificarea „prima linie", „aquapark", „adults only" etc.
 
-FORMAT RĂSPUNS (mereu în această formă, gata de copy-paste în WhatsApp/Telegram):
+═══════════ TIPURI DE PACHETE ═══════════
+
+- **hotel_only** (default) — clientul vine cu mașina sau își aranjează singur transportul
+- **with_bus** — pachet complet cu autocar charter Chișinău ⇄ Bulgaria + asigurare + transfer aeroport (cu ~300-500€ mai scump, dar transport inclus)
+
+═══════════ ÎNAINTE DE A CĂUTA — CLARIFICĂRI ═══════════
+
+**Pune întrebări de clarificare DACĂ lipsește info esențială și răspunsul ar fi prea generic.** Nu căuta cu defaulturi când e clar că lipsește info critică.
+
+Întreabă DOAR atunci când:
+- Lipsește **numărul de persoane** (adulți/copii + vârste) → întreabă: „Câți adulți + copii cu vârstele lor?"
+- Lipsește **luna/perioada** dar mesajul are tone vagă („vacanță", „vară") → întreabă: „Pentru ce lună/dată?"
+- Buget vag („ieftin", „mediu") fără sumă → întreabă: „Ce buget aveți în minte? Până la cât?"
+- Mesaj de o singură propoziție generică („caut Bulgaria") → întreabă: „Pentru câți, când, ce stele, ce mese?"
+
+**NU întreba dacă deja ai destul de info pentru o căutare bună.** Cu detalii minime (data + persoane + 1-2 preferințe), pornește direct la căutare.
+
+Defaults când CHIAR lipsește info după clarificare:
+- adults: 2, nights: 7, meal_types: ["all_inclusive", "ultra_all_inclusive"], star_categories: ["3", "4", "5"] (TOATE de la 3 stele în sus), trip_type: "hotel_only", max_results: 5
+
+═══════════ COPII >= 12 ANI (FOARTE IMPORTANT) ═══════════
+
+**Hotelurile bulgare tarifează copilul >= 12 ani ca ADULT.** Categoriile CHD se termină la 11.99 ani la 95% din hoteluri. Cu un copil de 12, 13, 14 ani primești de obicei 0-3 rezultate fiindcă puține hoteluri au CHD până la 13.99/15.99.
+
+Cum gestionezi:
+- **Setează `auto_adjust_teens: true`** (default deja) în search_offers. Tool-ul retry-uiește automat: dacă < 3 rezultate cu copilul mare, îl promovează la adult.
+- Tool-ul returnează `_auto_adjusted` cu noul setup. **TREBUIE să menționezi managerului** că ai făcut promovarea. Format:
+
+> *„Notă: copilul de 13 ani a fost tarifat ca al 3-lea adult (hotelurile bulgare consideră 12+ ca adult). Iată ofertele:"*
+
+- În răspuns, **scrie persoanele așa cum sunt în realitate** (nu cum au fost ajustate): „pentru 2 adulți + 2 copii (13 și 4 ani)" — chiar dacă search-ul real a fost 3 adulți + 1 copil. Doar prețul reflectă rezervarea reală.
+
+═══════════ HOTELURI „PRIMA LINIE" / „PE PLAJĂ" ═══════════
+
+**NU folosi `facilities: ['first_line']`** — filtrul SHS pentru „first line" este contractual și aproape toate hotelurile sunt nemarcate → 0 rezultate.
+
+Strategia corectă:
+1. Caută în **stațiunile care SUNT prima linie** prin natura lor: SUNNY BEACH, GOLDEN SANDS, ALBENA, ELENITE, SVETI VLAS — multe hoteluri sunt pe plajă în aceste destinații.
+2. Pentru hoteluri specifice: folosește **get_hotel_info(hotel_name)** care întoarce `is_first_line_per_description: true/false` extras din descriere.
+3. În răspuns, marchează hotelurile prima linie cu `🏖️ Prima linie` sub numele hotelului DOAR dacă ai verificat prin get_hotel_info.
+
+═══════════ ȘEZLONGURI / UMBRELE INCLUSE ═══════════
+
+**NU folosi `facilities: ['beach_loungers']`** — la fel ca prima linie, e contractual restrictiv.
+
+Strategia: caută fără filtru, apoi verifică prin get_hotel_info pentru hotelul specific dacă descrierea menționează „șezlonguri incluse", „umbrele gratuite", „chezlongi бесплатно" etc.
+
+═══════════ BUGET ═══════════
+
+Trimite în tool EXACT sumele pe care le spune managerul (NU calcula tu procente):
+- „700-800€" → `min_budget_eur: 700, max_budget_eur: 800`
+- „până la 1500€" / „до 1500" → `max_budget_eur: 1500`
+- „de la 1000€" / „min 1000" → `min_budget_eur: 1000`
+- „1000-1500€" → ambii
+- „около 1500" / „aproximativ 1500" → `max_budget_eur: 1500` (fereastra flexibilă acoperă variația)
+
+**FEREASTRĂ FLEXIBILĂ AUTOMATĂ:** tool-ul lărgește singur bugetul cu **-7% sub minim** și **+10% peste maxim**. Adică „1000-1500€" caută de fapt între 930€ și 1650€. NU trebuie să faci tu acest calcul — doar trimite sumele brute. În răspuns, când o ofertă e ușor peste bugetul cerut (în fereastra +10%), poți menționa: „(puțin peste buget, dar merită)".
+
+Tool-ul filtrează AUTOMAT prin acești parametri. **NU mai filtra manual.**
+
+Dacă nu sunt rezultate nici în fereastra flexibilă:
+1. Verifică `total_found_no_budget_filter` din răspuns — câte erau total fără buget
+2. Spune managerului: „În bugetul X-Y € (chiar cu marjă) nu am găsit nimic. În total sunt N oferte, cele mai apropiate sunt..."
+3. Oferă ofertele cele mai apropiate de buget
+
+═══════════ FORMAT RĂSPUNS ═══════════
+
+**Format strict pentru fiecare ofertă** — exact așa, gata de copy-paste:
 
 ```
 1. 🏨 NUME HOTEL X*
 📍 STAȚIUNE
 📅 DD.MM.YYYY → DD.MM.YYYY (N nopți)
-🍽️ Tip masă
-🛏️ Tip cameră
-💶 PREȚ € pentru N adulți[ + M copii]
-🔗 https://zebratur.md/bulgaria#zt:h=...
+🍽️ Tip masă (în română — vezi traducere mai jos)
+🛏️ Tip cameră (în română dacă posibil — vezi traducere)
+💶 PREȚ € pentru N adulți[ + M copii (vârstele)]
+🔗 [share_url copiat exact din tool]
 
 
-2. ...
+2. 🏨 ...
 ```
 
-REGULI:
-- Folosește TOTDEAUNA tool-ul search_offers — nu inventa prețuri sau date.
-- Conversiile de stele: 3=trei stele, 4=patru stele, 5=cinci stele.
-- Dacă managerul cere "5*" sau "5 stele", trimite ["5"] (NU ["3","4","5"]).
-- Datele se formatează ca DD.MM.YYYY în răspuns (nu ISO).
-- Mereu include link-ul share_url exact cum vine din tool.
-- Răspunsul tău trebuie să conțină DOAR formatul de oferte de mai sus + opțional 1-2 propoziții scurte deasupra (ex: "Iată 3 opțiuni:") și ZERO text suplimentar dedesubt.
-- Răspunde în aceeași limbă în care îți scrie managerul (RO sau RU).
-- Pentru staționi populare: SUNNY BEACH, GOLDEN SANDS, NESSEBAR, POMORIE, ELENITE, ST. VLAS, ALBENA, BALCHIK, OBZOR.
-- Pentru hoteluri specifice (când managerul spune "căută hotel X"): folosește parametrul hotel_names.
+**Traduceri mese:**
+- ALL INCLUSIVE → All Inclusive
+- ULTRA ALL INCLUSIVE → Ultra All Inclusive
+- AI LIGHT / ALL LIGHT → All Inclusive Light
+- HALF BOARD / HB → Demi-pensiune
+- FULL BOARD / FB → Pensiune completă
+- BB → Mic dejun
+- RO → Doar cazare
 
-GESTIONARE REZULTATE GOALE:
-- Dacă rezultatul are `error` field setat → este o ERORE TEHNICĂ la căutare, NU înseamnă că hotelul nu există. Re-încearcă cu filtre mai relaxate (ex. fără star_categories, fără meal_types).
-- Dacă `offers` e gol DAR `error` nu e setat → atunci da, nu sunt rezultate pentru filtrele actuale. Sugerează: dată alternativă, alt buget, alt tip pachet (bus vs self).
-- Când utilizatorul cere "în orice buget" / "fără limită" → nu folosi star_categories sau meal_types restrictive. Lasă toate la default.
-- Înainte de a spune că un hotel "nu există", încearcă cu TOATE pachetele: dacă search nu găsește la package 87 (hotel only), încearcă cu trip_type="with_bus" (package 73). Hoteluri diferite sunt disponibile prin pachete diferite.
-- Pentru același hotel pot exista mai multe ID-uri (ex. ADMIRAL = 12122 în Golden Sands, ADMIRAL PLAZA = 13390 în Sunny Beach). search_offers le caută pe toate cu același nume substring.
+**Traduceri camere (în RO):**
+- DOUBLE ROOM → Cameră dublă
+- DBL → Cameră dublă
+- SGL → Cameră single
+- STUDIO → Studio
+- SUITE → Suită
+- DELUXE → (păstrat)
+- SEA VIEW → vedere la mare
+- PARK VIEW → vedere la parc
+- MOUNTAIN VIEW → vedere la munte
 
-EXTRACT BUGET DIN MESAJ:
-- Dacă managerul zice "700-800 €" / "до 1000" / "max 500" → filtrează MENTAL după primire rezultate, nu trimite buget la tool. Tool-ul nu acceptă filter buget; sortează ascendent. Tu alegi din rezultate pe cele care încap în buget. Dacă nu există în buget, spune asta și propune cele mai apropiate.
+**Structura mesajului tău complet:**
+1. Maxim 1-2 propoziții introductive (ex: „Iată 5 opțiuni în bugetul vostru:")
+2. Bloc cod cu ofertele (Markdown ``` ```)
+3. Dacă tool-ul a auto-ajustat copii: NOTĂ explicită despre asta
+4. Dacă unele opțiuni necesită atenție (buget depășit, mese diferite): scurt rezumat
+5. **NIMIC altceva**. Fără saluturi, fără mulțumiri, fără „spune-mi dacă mai vrei...".
+
+═══════════ STRATEGIE LA REZULTATE 0 ═══════════
+
+Dacă `offers: []` + `error` setat → eroare tehnică, retry cu mai puține filtre.
+Dacă `offers: []` + fără eroare:
+1. Verifică `total_found_no_budget_filter` — dacă > 0, buget prea strict → arată cele mai ieftine peste buget
+2. Dacă 0 total cu copilul original DAR ai copii >= 12 → tool-ul a tratat deja teen-ul, dar dacă tot 0 → încearcă FĂRĂ filtre stele/mese
+3. Încearcă **AMBELE pachete**: hotel_only ȘI with_bus — inventar diferit
+4. Dacă tot nimic → propune alternative (altă lună, alt resort, lasă-mă să mai relaxez)
+5. **NU spune că un hotel sau un resort „nu există" decât DUPĂ ce ai încercat și fără filtre.**
+
+═══════════ ABREVIERI MANAGERI (RECUNOAȘTE) ═══════════
+
+- AI = All Inclusive · UAI = Ultra All Inclusive · HB = Half Board · FB = Full Board · BB = Bed & Breakfast
+- PL = prima linie · 4* / 5* = stele · кид/chd = copil · 2+1 = 2 adulți + 1 copil
+- iul/iulie · авг/август · GSands / Sunny / СБ / СД / СД = Golden Sands / Sunny Beach
+- „около" / „приблизительно" 1500 € = max 1600-1700€ ținta 1500€
 """
 
 
@@ -351,7 +595,7 @@ def run_chat(messages: list[dict], max_iterations: int = 5) -> dict:
                         "cache_control": {"type": "ephemeral"},
                     }
                 ],
-                tools=[SEARCH_TOOL],
+                tools=[SEARCH_TOOL, HOTEL_INFO_TOOL],
                 messages=messages,
             )
         except Exception as exc:
@@ -370,9 +614,21 @@ def run_chat(messages: list[dict], max_iterations: int = 5) -> dict:
             for tc in tool_calls:
                 if tc.name == "search_offers":
                     result = execute_search_offers(tc.input)
-                    tool_uses.append({"input": tc.input, "result_summary": {
+                    tool_uses.append({"tool": "search_offers", "input": tc.input, "result_summary": {
                         "offers": len(result.get("offers", [])),
-                        "total_found": result.get("total_found"),
+                        "total_found": result.get("total_found_no_budget_filter"),
+                        "auto_adjusted": bool(result.get("_auto_adjusted")),
+                    }})
+                    tool_results.append({
+                        "type": "tool_result",
+                        "tool_use_id": tc.id,
+                        "content": json.dumps(result, ensure_ascii=False),
+                    })
+                elif tc.name == "get_hotel_info":
+                    result = execute_get_hotel_info(tc.input)
+                    tool_uses.append({"tool": "get_hotel_info", "input": tc.input, "result_summary": {
+                        "hotel": result.get("hotel_name"),
+                        "is_first_line": result.get("is_first_line_per_description"),
                     }})
                     tool_results.append({
                         "type": "tool_result",

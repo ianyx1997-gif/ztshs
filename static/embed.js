@@ -35,6 +35,7 @@
       tripSelf: 'Doar cazare', tripSelfDesc: 'Doar hotelul — transportul îl asiguri tu',
       labelDates: '📅 Plecare în perioada', labelNights: '🌙 Nopți', labelTourists: '👥 Turiști',
       labelMeal: '🍽️ Tip masă', labelStars: '⭐ Categorie hotel', labelResort: '📍 Stațiune', labelFacilities: '✨ Facilități',
+      labelHotel: '🏨 Caută un hotel anume', hotelSearchPlaceholder: 'Scrie numele hotelului...', hotelNotFound: 'Niciun hotel găsit. Verifică ortografia.', clearHotel: 'șterge',
       adults: 'Adulți', adultsHint: '12+ ani', children: 'Copii', childrenHint: '0-12 ani',
       childAge: 'Vârsta copilului', years: 'ani', done: 'Gata',
       allResorts: 'Toate stațiunile din Bulgaria',
@@ -78,6 +79,7 @@
       tripSelf: 'Только проживание', tripSelfDesc: 'Только отель — транспорт ваш',
       labelDates: '📅 Период вылета', labelNights: '🌙 Ночи', labelTourists: '👥 Туристы',
       labelMeal: '🍽️ Тип питания', labelStars: '⭐ Категория отеля', labelResort: '📍 Курорт', labelFacilities: '✨ Удобства',
+      labelHotel: '🏨 Найти конкретный отель', hotelSearchPlaceholder: 'Введите название отеля...', hotelNotFound: 'Отель не найден. Проверьте написание.', clearHotel: 'очистить',
       adults: 'Взрослые', adultsHint: '12+ лет', children: 'Дети', childrenHint: '0-12 лет',
       childAge: 'Возраст ребёнка', years: 'лет', done: 'Готово',
       allResorts: 'Все курорты Болгарии',
@@ -140,9 +142,10 @@
   // ============ STATE ============
   var S = {
     cities: [], packages: [], facilities: [],
+    allHotels: [],
     selectedPackage: null,
     filters: {
-      tripType: 'bus', cityId: '',
+      tripType: 'bus', cityId: '', hotelId: '', hotelName: '',
       dateFrom: defaultDate(3), dateTo: defaultDate(10),
       nights: 7, adults: 2, children: [],
       mealIds: [6, 20], starIds: [5, 6], facilityIds: [],
@@ -155,6 +158,7 @@
     reserveOpen: false, reserveOffer: null,
     favOpen: false,
     paxOpen: false,
+    hotelSearchOpen: false, hotelSearchQuery: '', hotelSearchResults: [],
   };
 
   // ============ HELPERS ============
@@ -187,6 +191,68 @@
   }
   function cityHuman(s) { if(!s) return ''; return s.split(' ').map(function(w){return w.charAt(0)+w.slice(1).toLowerCase();}).join(' '); }
   function esc(s) { if(s==null) return ''; return String(s).replace(/[&<>"']/g, function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+
+  // ---- Fuzzy hotel search (typo-tolerant) ----
+  function normalizeText(s) {
+    if (!s) return '';
+    return s.toString().toLowerCase()
+      .normalize('NFD').replace(/[̀-ͯ]/g, '')  // strip diacritics
+      .replace(/[^a-z0-9а-я ]/gi, ' ')  // keep latin+cyrillic+digits
+      .replace(/\s+/g, ' ').trim();
+  }
+  function levenshtein(a, b) {
+    if (a === b) return 0;
+    if (!a.length) return b.length;
+    if (!b.length) return a.length;
+    var prev = [], i, j;
+    for (j = 0; j <= b.length; j++) prev[j] = j;
+    for (i = 1; i <= a.length; i++) {
+      var cur = [i];
+      for (j = 1; j <= b.length; j++) {
+        var cost = a.charCodeAt(i-1) === b.charCodeAt(j-1) ? 0 : 1;
+        cur[j] = Math.min(prev[j] + 1, cur[j-1] + 1, prev[j-1] + cost);
+      }
+      prev = cur;
+    }
+    return prev[b.length];
+  }
+  function fuzzyScore(query, target) {
+    // Returns 0..1, higher = better match. Tolerant of typos, partial, word order.
+    if (!query || !target) return 0;
+    var q = normalizeText(query), t = target;  // target already normalized
+    if (!q) return 0;
+    if (t === q) return 1;
+    if (t.indexOf(q) === 0) return 0.97;          // starts with query
+    if (t.indexOf(q) >= 0) return 0.9;            // contains query as substring
+    // Token-based: every query word found as substring in target
+    var qWords = q.split(' ').filter(Boolean);
+    var tWords = t.split(' ').filter(Boolean);
+    var allFound = qWords.every(function(qw){ return t.indexOf(qw) >= 0; });
+    if (allFound && qWords.length) return 0.82;
+    // Best per-word fuzzy (Levenshtein) — handles typos
+    var bestWordScore = 0;
+    qWords.forEach(function(qw){
+      tWords.forEach(function(tw){
+        var maxLen = Math.max(qw.length, tw.length);
+        if (maxLen === 0) return;
+        var dist = levenshtein(qw, tw);
+        var sim = 1 - dist / maxLen;
+        if (sim > bestWordScore) bestWordScore = sim;
+      });
+    });
+    // Whole-string Levenshtein similarity as fallback
+    var maxLen = Math.max(q.length, t.length);
+    var wholeSim = maxLen ? (1 - levenshtein(q, t) / maxLen) : 0;
+    return Math.max(bestWordScore * 0.8, wholeSim * 0.7);
+  }
+  function searchHotels(query) {
+    if (!query || query.length < 2 || !S.allHotels.length) return [];
+    var scored = S.allHotels.map(function(h){
+      return { hotel: h, score: fuzzyScore(query, h.norm) };
+    }).filter(function(x){ return x.score >= 0.45; });
+    scored.sort(function(a,b){ return b.score - a.score; });
+    return scored.slice(0, 8).map(function(x){ return x.hotel; });
+  }
   function loadFavs() { try { return JSON.parse(localStorage.getItem('zt-favorites') || '[]'); } catch(e) { return []; } }
   function saveFavs() { try { localStorage.setItem('zt-favorites', JSON.stringify(S.favorites)); } catch(e) {} }
   function isFav(o) { return S.favorites.some(function(f){ return f.price_id === o.price_id; }); }
@@ -276,6 +342,8 @@
     .zt-chip-meal-active { background: #3a48d0; color: white; border-color: #3a48d0; }
     .zt-chip-star-active { background: #f59e0b; color: white; border-color: #f59e0b; }
     .zt-chip-fac-active { background: #059669; color: white; border-color: #059669; }
+    .zt-hotel-result:hover { background: #eef2ff !important; }
+    .zt-hotel-result:last-child { border-bottom: 0 !important; }
     .zt-chip-warn { background: #fff1f2; color: #be123c; border-color: #fda4af; }
     .zt-chip-warn-active { background: #f43f5e; color: white; border-color: #f43f5e; }
     .zt-radio-card { flex: 1; padding: 14px; border: 2px solid #e2e8f0; border-radius: 14px; cursor: pointer; transition: all 0.15s; display: flex; gap: 10px; align-items: center; min-width: 200px; }
@@ -493,6 +561,31 @@
               ${S.cities.map(function(c){ return '<option value="'+c.id+'"'+(String(S.filters.cityId)===String(c.id)?' selected':'')+'>'+esc(c.name)+'</option>'; }).join('')}
             </select>
           </div>
+          <div style="margin-bottom:12px;position:relative;">
+            <div class="zt-label">${t('labelHotel')}</div>
+            ${S.filters.hotelId ? `
+              <div class="zt-row" style="gap:8px;background:#eef2ff;border:2px solid #c7d2fe;border-radius:10px;padding:8px 12px;max-width:400px;">
+                <span style="flex:1;font-weight:600;color:#3a48d0;">🏨 ${esc(S.filters.hotelName)}</span>
+                <button class="zt-btn" style="padding:2px 8px;font-size:12px;color:#dc2626;background:white;" data-action="clearHotel">✕ ${t('clearHotel')}</button>
+              </div>
+            ` : `
+              <div style="position:relative;max-width:400px;">
+                <input type="text" class="zt-input" id="zt-hotel-search" placeholder="${t('hotelSearchPlaceholder')}"
+                  value="${esc(S.hotelSearchQuery)}" data-action="hotelSearchInput" autocomplete="off">
+                ${S.hotelSearchResults.length ? `
+                  <div style="position:absolute;top:100%;left:0;right:0;margin-top:4px;background:white;border:2px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.15);max-height:280px;overflow-y:auto;z-index:20;">
+                    ${S.hotelSearchResults.map(function(h){
+                      return '<button class="zt-hotel-result" data-action="pickHotel" data-hotelid="'+h.id+'" data-hotelname="'+esc(h.name)+'" style="display:block;width:100%;text-align:left;padding:10px 12px;border:0;background:white;cursor:pointer;border-bottom:1px solid #f1f5f9;">'+
+                        '<div style="font-weight:600;font-size:14px;">'+esc(h.name)+' <span style="color:#d97706;">'+esc(h.category||'')+'</span></div>'+
+                        '<div style="font-size:12px;color:#64748b;">📍 '+esc(cityHuman(h.city))+'</div></button>';
+                    }).join('')}
+                  </div>
+                ` : (S.hotelSearchQuery.length >= 2 ? `
+                  <div style="position:absolute;top:100%;left:0;right:0;margin-top:4px;background:white;border:2px solid #e2e8f0;border-radius:10px;padding:12px;color:#94a3b8;font-size:13px;z-index:20;">${t('hotelNotFound')}</div>
+                ` : '')}
+              </div>
+            `}
+          </div>
           <div style="margin-bottom:14px;">
             <div class="zt-label">${t('labelFacilities')}</div>
             <div class="zt-row" style="gap:6px;">
@@ -627,11 +720,24 @@
 
   function tplHotelPage() {
     var h = S.hotel;
+    // Lowest price across loaded rooms (sorted asc already)
+    var cheapest = (S.hotelRooms && S.hotelRooms.length) ? S.hotelRooms[0] : null;
+    var lowPrice = cheapest ? (cheapest.brut_zebra || cheapest.gross_amount) : null;
+    var fromLabel = LANG === 'ru' ? 'от' : 'de la';
+    var reserveBtn = lowPrice
+      ? `<button class="zt-btn zt-btn-primary" data-action="reserveCheapest" style="display:flex;align-items:center;gap:10px;">
+           <span style="display:flex;flex-direction:column;align-items:flex-start;line-height:1.1;">
+             <span style="font-size:10px;opacity:0.85;font-weight:500;">${fromLabel}</span>
+             <span style="font-size:17px;font-weight:800;">${formatMoney(lowPrice)}</span>
+           </span>
+           <span style="border-left:1px solid rgba(255,255,255,0.4);padding-left:10px;">${t('reserveTemp')}</span>
+         </button>`
+      : `<button class="zt-btn zt-btn-primary" data-action="reserveCheapest">${t('reserveTemp')}</button>`;
     return `
       ${h ? tplHotelHeader(h) : '<div class="zt-card" style="text-align:center;padding:40px;">'+t('loading')+'</div>'}
       <div class="zt-row" style="justify-content:space-between;margin:14px 0;gap:8px;flex-wrap:wrap;">
         <button class="zt-btn zt-btn-secondary" data-action="backToSearch">${t('backToSearch')}</button>
-        <button class="zt-btn zt-btn-primary" data-action="reserveCheapest">${t('reserveTemp')}</button>
+        ${reserveBtn}
       </div>
       ${h ? tplHotelGallery(h) : ''}
       ${h ? tplHotelRooms() : ''}
@@ -863,7 +969,7 @@
     S.loading = true; S.results = null; S.displayCount = 30; render();
     var terminalId = (S.filters.tripType === 'bus' && pkg.departure_terminals && pkg.departure_terminals.length) ? pkg.departure_terminals[0].id : 0;
     try {
-      var r = await api('/api/search/packages', {
+      var body = {
         country_id: 1, package_id: pkg.id, departure_terminal_id: terminalId,
         from_date: S.filters.dateFrom, to_date: S.filters.dateTo,
         from_nights: S.filters.nights, to_nights: S.filters.nights,
@@ -871,7 +977,16 @@
         meal_ids: S.filters.mealIds, star_ids: S.filters.starIds, facility_ids: S.filters.facilityIds,
         city_ids: S.filters.cityId ? [parseInt(S.filters.cityId)] : null,
         markup_percent: 0,
-      });
+      };
+      // When a specific hotel is selected, search ONLY that hotel — relax meal/star/facility filters
+      if (S.filters.hotelId) {
+        body.hotel_ids = [parseInt(S.filters.hotelId)];
+        body.meal_ids = null;
+        body.star_ids = null;
+        body.facility_ids = null;
+        body.city_ids = null;  // backend auto-fills from package
+      }
+      var r = await api('/api/search/packages', body);
       if (r && r.error) throw new Error(r.error);
       S.results = r;
     } catch (e) {
@@ -1119,6 +1234,20 @@
     else if (a === 'favToggle') { S.favOpen = !S.favOpen; render(); }
     else if (a === 'sort') { S.sortBy = el.value; render(); }
     else if (a === 'showMore') { S.displayCount += 30; render(); }
+    else if (a === 'pickHotel') {
+      S.filters.hotelId = el.getAttribute('data-hotelid');
+      S.filters.hotelName = el.getAttribute('data-hotelname');
+      S.hotelSearchQuery = '';
+      S.hotelSearchResults = [];
+      render();
+    }
+    else if (a === 'clearHotel') {
+      S.filters.hotelId = '';
+      S.filters.hotelName = '';
+      S.hotelSearchQuery = '';
+      S.hotelSearchResults = [];
+      render();
+    }
     else if (a === 'prevPage') { loadPage((S.results && S.results.current_page || 1) - 1); }
     else if (a === 'nextPage') { loadPage((S.results && S.results.current_page || 1) + 1); }
     else if (a === 'copyFav') { var f = findOffer(el.getAttribute('data-priceid')); if (f) copyToClipboard(copyFavText(f)); }
@@ -1153,6 +1282,35 @@
       var k = el.getAttribute('data-key');
       if (k === 'dateFrom' || k === 'dateTo') S.filters[k] = el.value;
       else if (k === 'cityId') S.filters.cityId = el.value;
+    }
+    else if (a === 'hotelSearchInput') {
+      S.hotelSearchQuery = el.value;
+      S.hotelSearchResults = searchHotels(el.value);
+      // Re-render dropdown only — preserve input focus & cursor
+      renderHotelDropdown();
+    }
+  }
+  // Surgical re-render of just the hotel dropdown so the text input keeps focus
+  function renderHotelDropdown() {
+    var input = document.getElementById('zt-hotel-search');
+    if (!input) { render(); return; }
+    var wrap = input.parentNode;
+    var existing = wrap.querySelector('.zt-hotel-dropdown');
+    if (existing) existing.remove();
+    var dd = document.createElement('div');
+    dd.className = 'zt-hotel-dropdown';
+    if (S.hotelSearchResults.length) {
+      dd.style.cssText = 'position:absolute;top:100%;left:0;right:0;margin-top:4px;background:white;border:2px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.15);max-height:280px;overflow-y:auto;z-index:20;';
+      dd.innerHTML = S.hotelSearchResults.map(function(h){
+        return '<button class="zt-hotel-result" data-action="pickHotel" data-hotelid="'+h.id+'" data-hotelname="'+esc(h.name)+'" style="display:block;width:100%;text-align:left;padding:10px 12px;border:0;background:white;cursor:pointer;border-bottom:1px solid #f1f5f9;">'+
+          '<div style="font-weight:600;font-size:14px;">'+esc(h.name)+' <span style="color:#d97706;">'+esc(h.category||'')+'</span></div>'+
+          '<div style="font-size:12px;color:#64748b;">📍 '+esc(cityHuman(h.city))+'</div></button>';
+      }).join('');
+      wrap.appendChild(dd);
+    } else if (S.hotelSearchQuery.length >= 2) {
+      dd.style.cssText = 'position:absolute;top:100%;left:0;right:0;margin-top:4px;background:white;border:2px solid #e2e8f0;border-radius:10px;padding:12px;color:#94a3b8;font-size:13px;z-index:20;';
+      dd.textContent = t('hotelNotFound');
+      wrap.appendChild(dd);
     }
   }
 
@@ -1260,6 +1418,15 @@
       }
       if (Array.isArray(packages)) S.packages = packages;
     } catch (e) { console.warn('ZebraTur: load directories failed', e); }
+
+    // Load full hotel list (for fuzzy hotel search) — lazy, non-blocking
+    fetch(API + '/api/dir/hotels?country_id=1').then(function(r){ return r.json(); }).then(function(hotels){
+      if (Array.isArray(hotels)) {
+        S.allHotels = hotels.map(function(h){
+          return { id: h.id, name: h.name || '', city: h.city_name || h.city || '', category: h.category || '', norm: normalizeText(h.name || '') };
+        });
+      }
+    }).catch(function(){});
 
     // Read hash for deep links
     var hash = readHash();
