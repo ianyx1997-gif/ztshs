@@ -25,7 +25,7 @@ B2B_USERNAME = os.environ.get("B2B_USERNAME", "admin")
 # CORS — comma-separated list of allowed origins for widget/embed
 CORS_ALLOWED_ORIGINS = os.environ.get(
     "CORS_ALLOWED_ORIGINS",
-    "https://zebratur.md,https://www.zebratur.md,http://localhost:3000,*"
+    "https://zebratur.md,https://www.zebratur.md,https://ai.zebratur.md,http://localhost:3000,*"
 ).split(",")
 
 # Public base URL (used to build absolute URLs in emails, widget, etc.)
