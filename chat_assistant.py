@@ -148,8 +148,8 @@ def execute_search_offers(args: dict) -> dict:
             except Exception as exc:
                 log.warning("hotel resolve failed: %s", exc)
 
-        # If no city_ids and no hotel_ids, backend auto-fills from package
-        if not city_ids and not hotel_ids:
+        # SHS requires city_ids ALWAYS (even when hotel_ids is set), so auto-fill from package
+        if not city_ids:
             try:
                 pkg_list = client.get_package_list(1) or []
                 pkg = next((x for x in pkg_list if int(x.get("id", -1)) == package_id), None)
@@ -180,7 +180,12 @@ def execute_search_offers(args: dict) -> dict:
         ) or {}
 
         if isinstance(data, dict) and data.get("status") == "error":
-            return {"error": data.get("message", "search failed"), "offers": [], "total": 0}
+            return {
+                "error": data.get("message", "search failed"),
+                "offers": [], "total_found": 0,
+                "_debug_filters": {"hotel_ids": hotel_ids, "city_ids_count": len(city_ids), "meal_ids": meal_ids, "star_ids": star_ids, "trip_type": trip_type},
+                "_hint": "Search failed at SHS level — error is technical, not 'no results'. Try without filters or with different package_id.",
+            }
 
         prices = data.get("prices", []) or []
         prices.sort(key=lambda x: x.get("brut_zebra") or x.get("gross_amount") or 9e9)
@@ -301,13 +306,22 @@ REGULI:
 - Folosește TOTDEAUNA tool-ul search_offers — nu inventa prețuri sau date.
 - Conversiile de stele: 3=trei stele, 4=patru stele, 5=cinci stele.
 - Dacă managerul cere "5*" sau "5 stele", trimite ["5"] (NU ["3","4","5"]).
-- Dacă rezultatele sunt 0, sugerează relaxarea (mai puțin filtre, alt interval).
 - Datele se formatează ca DD.MM.YYYY în răspuns (nu ISO).
 - Mereu include link-ul share_url exact cum vine din tool.
 - Răspunsul tău trebuie să conțină DOAR formatul de oferte de mai sus + opțional 1-2 propoziții scurte deasupra (ex: "Iată 3 opțiuni:") și ZERO text suplimentar dedesubt.
 - Răspunde în aceeași limbă în care îți scrie managerul (RO sau RU).
 - Pentru staționi populare: SUNNY BEACH, GOLDEN SANDS, NESSEBAR, POMORIE, ELENITE, ST. VLAS, ALBENA, BALCHIK, OBZOR.
 - Pentru hoteluri specifice (când managerul spune "căută hotel X"): folosește parametrul hotel_names.
+
+GESTIONARE REZULTATE GOALE:
+- Dacă rezultatul are `error` field setat → este o ERORE TEHNICĂ la căutare, NU înseamnă că hotelul nu există. Re-încearcă cu filtre mai relaxate (ex. fără star_categories, fără meal_types).
+- Dacă `offers` e gol DAR `error` nu e setat → atunci da, nu sunt rezultate pentru filtrele actuale. Sugerează: dată alternativă, alt buget, alt tip pachet (bus vs self).
+- Când utilizatorul cere "în orice buget" / "fără limită" → nu folosi star_categories sau meal_types restrictive. Lasă toate la default.
+- Înainte de a spune că un hotel "nu există", încearcă cu TOATE pachetele: dacă search nu găsește la package 87 (hotel only), încearcă cu trip_type="with_bus" (package 73). Hoteluri diferite sunt disponibile prin pachete diferite.
+- Pentru același hotel pot exista mai multe ID-uri (ex. ADMIRAL = 12122 în Golden Sands, ADMIRAL PLAZA = 13390 în Sunny Beach). search_offers le caută pe toate cu același nume substring.
+
+EXTRACT BUGET DIN MESAJ:
+- Dacă managerul zice "700-800 €" / "до 1000" / "max 500" → filtrează MENTAL după primire rezultate, nu trimite buget la tool. Tool-ul nu acceptă filter buget; sortează ascendent. Tu alegi din rezultate pe cele care încap în buget. Dacă nu există în buget, spune asta și propune cele mai apropiate.
 """
 
 
