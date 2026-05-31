@@ -34,6 +34,15 @@ db.init_db()
 
 # ============================ CORS for widget/embed ============================
 
+@app.before_request
+def handle_cors_preflight():
+    """Handle OPTIONS preflight requests globally before any route matching."""
+    if request.method == "OPTIONS":
+        resp = make_response("")
+        resp.status_code = 204
+        return resp
+
+
 @app.after_request
 def apply_cors(resp):
     origin = request.headers.get("Origin", "")
@@ -44,12 +53,6 @@ def apply_cors(resp):
         resp.headers["Access-Control-Allow-Headers"] = "Content-Type, X-Actor"
         resp.headers["Access-Control-Allow-Credentials"] = "true"
     return resp
-
-
-@app.route("/", methods=["OPTIONS"])
-@app.route("/<path:p>", methods=["OPTIONS"])
-def cors_preflight(p=None):
-    return ("", 204)
 
 
 # ============================ B2B auth ============================
@@ -168,6 +171,66 @@ def page_login():
 def page_logout():
     session.clear()
     return redirect("/login")
+
+
+# ============================ Chat (manager AI assistant) ============================
+
+def chat_required(f):
+    """Protect chat routes — separate auth scope from B2B operator panel."""
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        if not session.get("chat_authed"):
+            if request.path.startswith("/api/"):
+                return _json_error("authentication required", 401)
+            return redirect(url_for("page_chat_login", next=request.path))
+        return f(*args, **kwargs)
+    return wrapper
+
+
+@app.route("/chat-login", methods=["GET", "POST"])
+def page_chat_login():
+    err = None
+    if request.method == "POST":
+        pwd = request.form.get("password") or ""
+        if pwd == config.CHAT_PASSWORD:
+            session.permanent = True
+            session["chat_authed"] = True
+            session["chat_logged_at"] = int(time.time())
+            nxt = request.args.get("next") or "/chat"
+            return redirect(nxt)
+        err = "Parolă incorectă"
+    return render_template("chat_login.html", agency=config.AGENCY_NAME, error=err)
+
+
+@app.route("/chat")
+@chat_required
+def page_chat():
+    return render_template("chat.html", agency=config.AGENCY_NAME)
+
+
+@app.route("/chat-logout")
+def page_chat_logout():
+    session.pop("chat_authed", None)
+    session.pop("chat_logged_at", None)
+    return redirect("/chat-login")
+
+
+@app.route("/api/chat/query", methods=["POST"])
+@chat_required
+def api_chat_query():
+    p = _body()
+    messages = p.get("messages") or []
+    if not isinstance(messages, list) or not messages:
+        return _json_error("missing messages")
+
+    from chat_assistant import run_chat
+    result = run_chat(messages)
+    db.audit("chat-manager", "chat.query", details={
+        "msg_count": len(messages),
+        "last_user_msg": (messages[-1].get("content", "") if isinstance(messages[-1].get("content"), str) else "complex")[:200],
+        "tokens": result.get("usage", {}),
+    })
+    return jsonify(result)
 
 
 @app.route("/turist")
