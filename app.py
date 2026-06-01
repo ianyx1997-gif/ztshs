@@ -246,10 +246,10 @@ def _proxy_ztfinder(messages):
         return None
     try:
         r = requests.post(
-            config.ZTFINDER_URL.rstrip("/") + "/api/chat/query",
+            config.ZTFINDER_URL.rstrip("/") + "/api/quick",  # calea RAPIDĂ (1 Claude + format Node) pt. timp real
             json={"messages": messages},
             headers={"X-API-Key": config.ZTFINDER_KEY, "Content-Type": "application/json"},
-            timeout=130,
+            timeout=48,  # sub fereastra Salesbot Kommo (~50-60s); peste → mesaj grațios
         )
         d = r.json()
         return {"text": d.get("text") or d.get("reply") or "", "engine": "ztfinder"}
@@ -271,7 +271,8 @@ def api_chat_query():
         if routed is not None:
             db.audit("chat-manager", "chat.query", details={"engine": "ztfinder", "msg_count": len(messages)})
             return jsonify(routed)
-        # ztfinder indisponibil → cădem înapoi pe motorul local
+        # ztfinder lent/indisponibil pt. non-Bulgaria (SHS n-are inventar acolo) → mesaj grațios, NU SHS
+        return jsonify({"text": "Caut cele mai bune oferte pentru tine — durează puțin. Scrie-mi te rog din nou peste câteva secunde și ți le trimit imediat. 🙏", "engine": "ztfinder-busy"})
 
     from chat_assistant import run_chat
     result = run_chat(messages)
