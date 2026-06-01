@@ -176,14 +176,21 @@ def page_logout():
 # ============================ Chat (manager AI assistant) ============================
 
 def chat_required(f):
-    """Protect chat routes — separate auth scope from B2B operator panel."""
+    """Protect chat routes. Accepts either a logged-in session OR a valid X-API-Key
+    header (for server-to-server callers like the Kommo bot)."""
     @wraps(f)
     def wrapper(*args, **kwargs):
-        if not session.get("chat_authed"):
-            if request.path.startswith("/api/"):
-                return _json_error("authentication required", 401)
-            return redirect(url_for("page_chat_login", next=request.path))
-        return f(*args, **kwargs)
+        # 1. API key (server-to-server) — checked first
+        api_key = request.headers.get("X-API-Key", "")
+        if config.CHAT_API_KEY and api_key and api_key == config.CHAT_API_KEY:
+            return f(*args, **kwargs)
+        # 2. Session cookie (browser managers)
+        if session.get("chat_authed"):
+            return f(*args, **kwargs)
+        # Reject
+        if request.path.startswith("/api/"):
+            return _json_error("authentication required", 401)
+        return redirect(url_for("page_chat_login", next=request.path))
     return wrapper
 
 
