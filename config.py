@@ -38,6 +38,10 @@ CHAT_PASSWORD = os.environ.get("CHAT_PASSWORD", "zebra-chat-2026")  # shared pas
 CHAT_DAILY_LIMIT_PER_SESSION = int(os.environ.get("CHAT_DAILY_LIMIT_PER_SESSION", "100"))
 # API key for server-to-server access (Kommo bot etc.) — bypasses session cookie auth
 CHAT_API_KEY = os.environ.get("CHAT_API_KEY", "")
+# Motorul nou (ztfinder/otpusk). /api/chat/query rutează: Bulgaria → motor local SHS;
+# orice ALTĂ destinație → proxy către ztfinder (otpusk, inventar global). Gol = rutare dezactivată.
+ZTFINDER_URL = os.environ.get("ZTFINDER_URL", "")
+ZTFINDER_KEY = os.environ.get("ZTFINDER_KEY", "")
 SHS_USERNAME = os.environ.get("SHS_USERNAME", "ianyx1997@gmail.com")
 SHS_PASSWORD = os.environ.get("SHS_PASSWORD", "aRxHghmAQH5Fdolr7kdMwNPMtpOFdM")
 SHS_REPORT_TOKEN = os.environ.get("SHS_REPORT_TOKEN", "aRxHghmAQH5Fdolr7kdMwNPMtpOFdM")

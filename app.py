@@ -222,6 +222,41 @@ def page_chat_logout():
     return redirect("/chat-login")
 
 
+# Cuvinte-cheie Bulgaria (RO/RU/EN + stațiuni) → rămâne pe motorul local SHS.
+# Orice altă destinație → motorul nou ztfinder (otpusk, inventar global).
+_BG_KEYWORDS = (
+    "bulgar", "болгар", "nisipur", "nisipurile de aur", "golden sands", "zlatni", "золотые пески",
+    "sunny beach", "slanchev", "слънчев", "солнечный берег", "albena", "албена",
+    "nessebar", "nesebar", "несебър", "несебыр", "sozopol", "созопол", "varna", "варна",
+    "burgas", "бургас", "sveti vlas", "свети влас", "elenite", "еленіте", "obzor", "обзор",
+    "kranevo", "кранево", "pomorie", "поморие", "primorsko", "приморско", "ravda", "равда",
+    "balchik", "балчик", "duni", "kiten", "китен", "tsarevo", "sunny day", "sveti konstantin",
+)
+
+def _wants_bulgaria(messages) -> bool:
+    text = " ".join(
+        m.get("content", "") for m in messages
+        if isinstance(m, dict) and isinstance(m.get("content"), str)
+    ).lower()
+    return any(k in text for k in _BG_KEYWORDS)
+
+def _proxy_ztfinder(messages):
+    """Trimite cererea la motorul nou ztfinder și întoarce {text}. None la eroare/nedisponibil."""
+    if not config.ZTFINDER_URL or not config.ZTFINDER_KEY:
+        return None
+    try:
+        r = requests.post(
+            config.ZTFINDER_URL.rstrip("/") + "/api/chat/query",
+            json={"messages": messages},
+            headers={"X-API-Key": config.ZTFINDER_KEY, "Content-Type": "application/json"},
+            timeout=130,
+        )
+        d = r.json()
+        return {"text": d.get("text") or d.get("reply") or "", "engine": "ztfinder"}
+    except Exception as exc:
+        log.warning("proxy ztfinder a eșuat: %s", exc)
+        return None
+
 @app.route("/api/chat/query", methods=["POST"])
 @chat_required
 def api_chat_query():
@@ -230,9 +265,18 @@ def api_chat_query():
     if not isinstance(messages, list) or not messages:
         return _json_error("missing messages")
 
+    # RUTARE: Bulgaria → motor local SHS; orice ALTĂ destinație → motorul nou ztfinder (otpusk)
+    if not _wants_bulgaria(messages):
+        routed = _proxy_ztfinder(messages)
+        if routed is not None:
+            db.audit("chat-manager", "chat.query", details={"engine": "ztfinder", "msg_count": len(messages)})
+            return jsonify(routed)
+        # ztfinder indisponibil → cădem înapoi pe motorul local
+
     from chat_assistant import run_chat
     result = run_chat(messages)
     db.audit("chat-manager", "chat.query", details={
+        "engine": "shs",
         "msg_count": len(messages),
         "last_user_msg": (messages[-1].get("content", "") if isinstance(messages[-1].get("content"), str) else "complex")[:200],
         "tokens": result.get("usage", {}),
